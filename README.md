@@ -97,6 +97,7 @@ To try the tools interactively, run `npm run inspect`. It opens the MCP Inspecto
 | `VSP360_TIMEOUT_MS` | `120000` | Request timeout; uploads are exempt |
 | `VSP360_MAX_RESPONSE_CHARS` | `60000` | Truncation limit for text responses |
 | `VSP360_DOWNLOAD_DIR` | `~/Downloads/vsp360-mcp` | Where binary downloads are saved |
+| `VSP360_PATH_REWRITES` | `/api/v1/protection=/dataprotection/api/v1/protection` | Gateway prefixes the spec leaves out, as comma-separated `/from=/to` pairs. The default makes the Data Protection operations reach `/dataprotection/...`. |
 | `VSP360_SPEC` | bundled spec | Path to a different OpenAPI file, e.g. a newer VSP 360 release |
 
 ## Tag names for `VSP360_TOOLSETS`

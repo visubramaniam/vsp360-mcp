@@ -18,6 +18,23 @@ export interface Config {
   timeoutMs: number;
   maxResponseChars: number;
   downloadDir: string;
+  pathRewrites: [string, string][];
+}
+
+// The spec documents some application APIs without the gateway prefix they are
+// actually served under, e.g. Data Protection lives at /dataprotection/api/v1/protection.
+const DEFAULT_PATH_REWRITES = "/api/v1/protection=/dataprotection/api/v1/protection";
+
+function parseRewrites(spec: string): [string, string][] {
+  return spec
+    .split(",")
+    .map((r) => r.trim())
+    .filter(Boolean)
+    .map((r) => {
+      const i = r.indexOf("=");
+      if (i <= 0) throw new Error(`Invalid VSP360_PATH_REWRITES entry "${r}" (expected /from=/to)`);
+      return [r.slice(0, i), r.slice(i + 1)] as [string, string];
+    });
 }
 
 export function loadConfig(env = process.env): Config {
@@ -33,6 +50,7 @@ export function loadConfig(env = process.env): Config {
     timeoutMs: Number(env.VSP360_TIMEOUT_MS ?? 120_000),
     maxResponseChars: Number(env.VSP360_MAX_RESPONSE_CHARS ?? 60_000),
     downloadDir: env.VSP360_DOWNLOAD_DIR || join(homedir(), "Downloads", "vsp360-mcp"),
+    pathRewrites: parseRewrites(env.VSP360_PATH_REWRITES ?? DEFAULT_PATH_REWRITES),
   };
 }
 
@@ -121,7 +139,7 @@ export class Vsp360Client {
     } catch {}
     if (!items) return this.render(op, first.res, first.buf, args);
 
-    let next = nextLink(first.res.headers.get("link"), url);
+    let next = this.followable(nextLink(first.res.headers.get("link"), url));
     let pages = 1;
     const maxPages = args.max_pages ?? 20;
     while (next && pages < maxPages) {
@@ -131,7 +149,7 @@ export class Vsp360Client {
       if (!Array.isArray(data)) break;
       items.push(...data);
       pages++;
-      next = nextLink(page.res.headers.get("link"), next);
+      next = this.followable(nextLink(page.res.headers.get("link"), next));
     }
     const note = next ? `\n\n[Stopped after ${pages} pages (max_pages); more results exist.]` : "";
     return { ok: true, status: first.res.status, text: this.truncate(JSON.stringify(items, null, 2), `${items.length} items from ${pages} page(s)`) + note };
@@ -155,8 +173,23 @@ export class Vsp360Client {
       else if (typeof v === "object") query.append(p.name, JSON.stringify(v));
       else query.append(p.name, String(v));
     }
+    path = this.rewritePath(path);
     const qs = query.toString();
     return `${this.cfg.baseUrl}${path}${qs ? `?${qs}` : ""}`;
+  }
+
+  private rewritePath(path: string): string {
+    for (const [from, to] of this.cfg.pathRewrites) {
+      if (path === from || path.startsWith(from + "/")) return to + path.slice(from.length);
+    }
+    return path;
+  }
+
+  /** Re-homes a server-supplied link onto the configured base URL and gateway prefix. */
+  private followable(link?: string): string | undefined {
+    if (!link) return undefined;
+    const u = new URL(link);
+    return `${this.cfg.baseUrl}${this.rewritePath(u.pathname)}${u.search}`;
   }
 
   private async buildBody(op: Operation, args: CallArgs) {
