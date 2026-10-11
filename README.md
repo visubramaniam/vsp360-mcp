@@ -104,3 +104,7 @@ Users · Groups · Group Access · Service Accounts · Roles · Identity Provide
 ## Updating for a new VSP 360 release
 
 Replace `spec/vsp360-openapi.yaml` and restart the server. No code is generated from the spec, so nothing needs rebuilding. If the new release adds `POST` operations that only read data, add them to `READ_ONLY_POSTS` in `src/spec.ts`.
+
+## License
+
+The code in this repository is released under the [MIT License](LICENSE). The VSP 360 OpenAPI definition in `spec/` describes Hitachi Vantara's product API and is not covered by this license.
