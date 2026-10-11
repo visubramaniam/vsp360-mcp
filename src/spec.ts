@@ -198,3 +198,13 @@ export function fileFields(op: Operation): string[] {
     .filter(([, s]) => s.format === "binary")
     .map(([k]) => k);
 }
+
+/**
+ * A spec parameter name as a tool input property. MCP clients only accept
+ * `[A-Za-z0-9_.-]{1,64}`, so names like Prometheus' `match[]` are rewritten
+ * (`match[]` → `match`); the client maps them back before calling the API.
+ */
+export function toolParamName(name: string): string {
+  return name.replace(/\[\]$/, "").replace(/[^A-Za-z0-9_.-]/g, "_").slice(0, 64) || "param";
+}
+

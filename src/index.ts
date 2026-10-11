@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema, type Tool } from "@modelcontextprotocol/sdk/types.js";
-import { Spec, type Operation, fileFields, isMultipart } from "./spec.js";
+import { Spec, type Operation, fileFields, isMultipart, toolParamName } from "./spec.js";
 import { Vsp360Client, loadConfig, type CallArgs } from "./client.js";
 
 type Json = any;
@@ -105,8 +105,10 @@ function directTool(op: Operation): Tool {
   const properties: Record<string, Json> = {};
   const required: string[] = [];
   for (const p of op.params) {
-    properties[p.name] = { ...p.schema, description: [p.description, p.schema.description].filter(Boolean).join(" ") || undefined };
-    if (p.required) required.push(p.name);
+    const key = toolParamName(p.name);
+    const note = key === p.name ? undefined : `Sent to the API as \`${p.name}\`.`;
+    properties[key] = { ...p.schema, description: [p.description, p.schema.description, note].filter(Boolean).join(" ") || undefined };
+    if (p.required) required.push(key);
   }
   if (op.bodySchema) {
     if (isMultipart(op)) {

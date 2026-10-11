@@ -4,7 +4,7 @@ import { readFileSync, mkdirSync, writeFileSync, openAsBlob, existsSync } from "
 import { basename, join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { Agent, fetch, FormData, type Response } from "undici";
-import { type Operation, isMultipart, fileFields } from "./spec.js";
+import { type Operation, isMultipart, fileFields, toolParamName } from "./spec.js";
 
 type Json = any;
 
@@ -119,7 +119,15 @@ export class Vsp360Client {
   }
 
   async call(op: Operation, args: CallArgs): Promise<CallResult> {
-    const params = args.params ?? {};
+    const params: Record<string, unknown> = { ...(args.params ?? {}) };
+    // Direct tools expose parameters under tool-safe names (`match[]` → `match`): map them back.
+    for (const p of op.params) {
+      const alias = toolParamName(p.name);
+      if (alias !== p.name && !(p.name in params) && alias in params) {
+        params[p.name] = params[alias];
+        delete params[alias];
+      }
+    }
     let url: string;
     const headers: Record<string, string> = { accept: op.successContentTypes.find((t) => t.includes("json")) ? "application/json" : "*/*" };
     try {
