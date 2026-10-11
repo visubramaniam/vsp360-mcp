@@ -42,6 +42,8 @@ All other operations are refused, and direct tools are not created for them. The
 
 ## Setup
 
+Prefer Docker? See [README.docker.md](README.docker.md) to run the published container image instead of building from source.
+
 1. Create a service account in VSP 360 and note its client ID and secret. Give it the access your use case needs: `admin` covers alerts, logs and system operations; for devices, use a group whose access policy covers the device types.
 2. Build the server:
 
