@@ -18,6 +18,18 @@ For the areas you use most, set `VSP360_TOOLSETS` to add **direct tools**: one t
 VSP360_TOOLSETS="Device Registry,Platform Alerts,VSP 360 Cluster Health"
 ```
 
+### How `vsp360_list_operations` ranks results
+
+A `query` is ranked with **BM25** over each operation's ID, summary, tag, path and description, so plain-language requests work ("volumes with no host path", "silence alerts"). The ranking has five refinements:
+
+- **Fields are weighted:** words in the summary and ID count more than words in the description.
+- **camelCase is split and light stemming is applied.**
+- **Storage vocabulary is mapped to API terms,** for example volume → ldev, LDAP → directories, ESXi → hypervisor.
+- **Verbs decide intent:** "list" and "show" favour read operations, while "delete", "start" and "register" favour write operations.
+- **List-style requests prefer collection endpoints** over `{id}` endpoints.
+
+Each result set carries a **confidence** of HIGH, MEDIUM or LOW, based on how far the top hit leads the next and how much of the request's own wording it matches. The rating comes with advice: call the top result, check its description, or describe the top two or three. When a LOW or MEDIUM result looks like a performance or topology question, the response points to `analyticsRunQuery`. `npm run eval` scores the search against 53 labelled requests, 15 of them held out from tuning.
+
 ## Safety: read-only by default
 
 By default only `GET` operations are allowed, plus a few `POST` operations that only query or validate:

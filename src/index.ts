@@ -11,12 +11,14 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ListToolsRequestSchema, type Tool } from "@modelcontextprotocol/sdk/types.js";
 import { Spec, type Operation, fileFields, isMultipart, toolParamName } from "./spec.js";
 import { Vsp360Client, loadConfig, type CallArgs } from "./client.js";
+import { OperationIndex, analyticsHint } from "./search.js";
 
 type Json = any;
 
 const here = dirname(fileURLToPath(import.meta.url));
 const spec = new Spec(process.env.VSP360_SPEC || join(here, "..", "spec", "vsp360-openapi.yaml"));
 const allowWrites = process.env.VSP360_ALLOW_WRITES === "true";
+const index = new OperationIndex(spec.operations.values());
 const toolsets = (process.env.VSP360_TOOLSETS ?? "")
   .split(",")
   .map((s) => s.trim())
@@ -43,7 +45,8 @@ const META_TOOLS: Tool[] = [
       type: "object",
       properties: {
         tag: { type: "string", description: "API area, e.g. 'Device Registry', 'Platform Alerts', 'Users'. Case-insensitive." },
-        query: { type: "string", description: "Words to match against operationId, path, summary and description." },
+        query: { type: "string", description: "What you want to do, in plain words (e.g. 'volumes with no host path', 'replication pairs status'). Ranked by BM25 relevance with a confidence rating." },
+        limit: { type: "integer", minimum: 1, maximum: 40, description: "Maximum results for a query (default 10)." },
       },
     },
     annotations: { readOnlyHint: true, openWorldHint: false },
@@ -163,22 +166,28 @@ function text(t: string, isError = false) {
 
 function listOperations(args: Json) {
   const tag = (args.tag ?? "").toLowerCase();
-  const words = String(args.query ?? "").toLowerCase().split(/\s+/).filter(Boolean);
-  if (!tag && !words.length) {
+  const query = String(args.query ?? "").trim();
+  if (!tag && !query) {
     const lines = spec.tags.map((t) => `- ${t.name} (${t.count}): ${t.description}`);
     return text(`VSP 360 API areas (${spec.operations.size} operations). Pass tag or query to list operations.\n\n${lines.join("\n")}`);
   }
-  const matches = [...spec.operations.values()].filter((op) => {
-    if (tag && op.tag.toLowerCase() !== tag) return false;
-    const hay = `${op.operationId} ${op.path} ${op.summary} ${op.description} ${op.tag}`.toLowerCase();
-    return words.every((w) => hay.includes(w));
-  });
-  if (!matches.length) return text("No operations matched. Call with no arguments to see the available tags.");
-  const lines = matches.slice(0, 80).map(
-    (op) => `- ${op.operationId} [${op.readOnly ? "read" : "write"}] ${op.method} ${op.path} — ${op.summary}`,
-  );
-  const more = matches.length > 80 ? `\n\n(${matches.length - 80} more; narrow the query)` : "";
-  return text(`${matches.length} operation(s):\n${lines.join("\n")}${more}`);
+  const fmt = (op: Operation) => `${op.operationId} [${op.readOnly ? "read" : "write"}] ${op.method} ${op.path} — ${op.summary}`;
+  if (!query) {
+    const ops = [...spec.operations.values()].filter((op) => op.tag.toLowerCase() === tag);
+    if (!ops.length) return text("No operations in that area. Call with no arguments to see the available tags.");
+    return text(`${ops.length} operation(s) in ${ops[0].tag}:\n${ops.map((op) => "- " + fmt(op)).join("\n")}`);
+  }
+  const limit = Math.min(Math.max(Number(args.limit) || 10, 1), 40);
+  const { hits, confidence, reason } = index.search(query, { tag: tag || undefined, limit });
+  if (!hits.length) return text("No operations matched. Try other words, or call with no arguments to see the API areas.");
+  const advice = {
+    high: "Use the top result; describe it first if you need its parameters.",
+    medium: "The top result is likely right. Check its description against the request before calling.",
+    low: "Results are ambiguous. Describe the top 2–3 candidates and pick by their descriptions, or refine the query with more specific words.",
+  }[confidence];
+  const lines = hits.map((h, i) => `${i + 1}. ${fmt(h.op)}  (score ${h.score.toFixed(2)}; matched: ${h.matched.join(", ")})`);
+  const hint = confidence !== "high" ? analyticsHint(query) : null;
+  return text(`Confidence: ${confidence.toUpperCase()}: ${reason}.\n${advice}${hint ? "\n" + hint : ""}\n\n${lines.join("\n")}`);
 }
 
 function describeOperation(args: Json) {
