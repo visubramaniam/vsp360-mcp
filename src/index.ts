@@ -227,7 +227,7 @@ async function runOperation(op: Operation, args: CallArgs) {
   return text(result.text, !result.ok);
 }
 
-const server = new Server({ name: "vsp360-mcp", version: "0.1.3" }, { capabilities: { tools: {} } });
+const server = new Server({ name: "vsp360-mcp", version: "0.1.4" }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [...META_TOOLS, ...[...directOps.values()].map(directTool)],
