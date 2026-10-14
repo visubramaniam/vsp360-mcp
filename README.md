@@ -29,7 +29,7 @@ A `query` is ranked with **BM25** over each operation's ID, summary, tag, path, 
 - **List-style requests prefer collection endpoints** over `{id}` endpoints.
 - **Example questions bridge operator wording and API wording:** each operation has a few questions an operator might ask, such as "take a snapshot now outside the schedule" for `protectionTriggerPolicy`. Set `VSP360_EXAMPLES` to another file to use your own, or to an empty string to turn them off.
 
-Each result set carries a **confidence** of HIGH, MEDIUM or LOW, based on how far the top hit leads the next and how much of the request's own wording it matches. The rating comes with advice: call the top result, check its description, or describe the top two or three. When a LOW or MEDIUM result looks like a performance or topology question, the response points to `analyticsRunQuery`. `npm run eval` scores the search against 83 labelled requests, 45 of them held out from tuning; `EXAMPLES=0 npm run eval` measures it without the example questions.
+Each result set carries a **confidence** of HIGH, MEDIUM or LOW, based on how far the top hit leads the next and how much of the request's own wording it matches. The rating comes with advice: call the top result, check its description, or describe the top two or three. When a LOW or MEDIUM result looks like a performance or topology question, the response points to `analyticsRunQuery`. `npm run eval` scores the search against 83 labelled development requests (45 held out from tuning) and 119 real user questions in `tests/user-questions.tsv` (79 held out); `EXAMPLES=0 npm run eval` measures it without the example questions.
 
 ### Decision log
 
