@@ -1,6 +1,3 @@
-# Real user questions with expected answers. expected: operationIds separated by |, or ANALYTICS (answered
-# with analyticsRunQuery / MQL), NONE (the VSP 360 API cannot answer it), META (a question about the API itself,
-# answered by the discovery tools; not scored). split: test = held out, never used for tuning.
 n	section	split	expected	question
 1	Discovery & MCP Meta-Tools	train	META	What VSP 360 API operation tags and areas are currently available to query?
 2	Discovery & MCP Meta-Tools	test	vsp360PostDevicesEnroll	How do I inspect the input schema and required parameters for registering a new storage system?
