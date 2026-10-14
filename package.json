@@ -17,7 +17,8 @@
     "inspect": "npx @modelcontextprotocol/inspector node dist/index.js",
     "eval": "npm run build && node tests/search-eval.mjs",
     "decision-report": "node tests/decision-report.mjs",
-    "collect-batch": "node tests/collect-batch.mjs"
+    "collect-batch": "node tests/collect-batch.mjs",
+    "train-decision": "node tests/train-decision.mjs"
   },
   "engines": {
     "node": ">=20"
