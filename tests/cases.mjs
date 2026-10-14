@@ -95,7 +95,6 @@ export const HELD_OUT_2 = [
   ["delete the upgrade package i staged by mistake", ["vsp360DeleteUpgradesPending"]],
 ];
 
-// Real user questions: { n, section, split, want[], question }.
-import { readFileSync } from "node:fs";
-export const USER_QUESTIONS = readFileSync(new URL("./user-questions.tsv", import.meta.url), "utf8").split("\n").slice(1).filter(Boolean)
-  .map((l) => { const [n, section, split, expected, question] = l.split("\t"); return { n: +n, section, split, want: expected.split("|"), question }; });
+// Real user questions, from the labelled part of tests/user-queries.md: { n, section, split, want[], question }.
+import { labelledQuestions } from "./queries.mjs";
+export const USER_QUESTIONS = labelledQuestions();

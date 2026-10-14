@@ -1,15 +1,17 @@
 # vsp360-mcp: user test queries
 
-Every user question collected for testing the `vsp360` MCP server, in one place: **387 unique questions** from four sources. Six reworded duplicates were removed (listed at the end).
+Every user question for testing the `vsp360` MCP server, in one place: **387 unique questions**. This is the only question file: the evaluation, training, report and batch scripts all read it through `tests/queries.mjs`.
 
-| Part | Questions | Source file | What it is for |
+| Part | Questions | Kind | Used by |
 |---|---|---|---|
-| [1. Regression prompts](#part-1-regression-prompts-with-expected-results) | 74 | this file | Manual checks with the expected operation and lab values |
-| [2. Labelled questions](#part-2-labelled-questions) | 119 | `user-questions.tsv` (`user-questions-raw.txt` is the same set, unlabelled) | Search evaluation: `npm run eval`; 79 are held out as the test split |
-| [3. First batch](#part-3-batch-questions-first-batch) | 97 | `user-questions-new.txt` | Batch collection for the decision log (`npm run collect-batch`) |
-| [4. Second batch](#part-4-batch-questions-second-batch) | 97 | `user-questions-batch.txt` | Batch collection, run with the decision hint in A/B mode |
+| [1. Regression prompts](#part-1-regression-prompts-with-expected-results) | 74 | Prompt, expected path and check | Manual checks |
+| [2. Labelled questions](#part-2-labelled-questions) | 119 | Question, expected answer and split | `npm run eval` scores the 79 `test` questions; `npm run train-decision` trains on the `train` ones; `collect-batch --part 2` runs the `train` ones |
+| [3. First batch](#part-3-batch-questions-first-batch) | 97 | Unlabelled question | `npm run collect-batch -- --part 3` |
+| [4. Second batch](#part-4-batch-questions-second-batch) | 97 | Unlabelled question | `npm run collect-batch -- --part 4 --hint ab` |
 
-The source files stay in place because the scripts read them: `search-eval.mjs` and `train-decision.mjs` read `user-questions.tsv`, and `collect-batch.mjs` tracks progress by file name. Question numbers in Parts 2–4 match the numbers in those files.
+**Adding questions.** Add rows to an existing table, or a new part for a new batch: a `## Part N: Title` heading, `### Section` headings, and a table with the header `| # | Question |` (unlabelled) or `| # | Question | Expected | Split |` (labelled). In **Expected**, list acceptable `operationId`s in backticks, or write `Analytics (MQL)`, `not available in the API` or `discovery tools`, separated by commas. **Split** is `test` or `train`; never move a `test` question into examples or training data. Escape a `|` inside a question as `\|`. Number questions within each part; `collect-batch` tracks progress by part and number, so do not renumber questions that have already run.
+
+Six reworded duplicates were removed when the earlier question files were merged into this one; they are listed at the end.
 
 ## Part 1: Regression prompts with expected results
 
@@ -343,7 +345,7 @@ Each question is labelled with the answer a good search should lead to: one or m
 
 ## Part 3: Batch questions (first batch)
 
-Unlabelled. Run through Claude with `npm run collect-batch -- tests/user-questions-new.txt`; the decision log records what Claude did with each.
+Unlabelled. Run through Claude with `npm run collect-batch -- --part 3`; the decision log records what Claude did with each.
 
 ### Discovery & API Capabilities
 
@@ -494,7 +496,7 @@ Unlabelled. Run through Claude with `npm run collect-batch -- tests/user-questio
 
 ## Part 4: Batch questions (second batch)
 
-Unlabelled. Run with `npm run collect-batch -- tests/user-questions-batch.txt --hint ab`.
+Unlabelled. Run with `npm run collect-batch -- --part 4 --hint ab`.
 
 ### Discovery & API Capabilities
 
@@ -645,7 +647,7 @@ Unlabelled. Run with `npm run collect-batch -- tests/user-questions-batch.txt --
 
 ## Duplicates removed
 
-These questions asked the same thing as one kept elsewhere in this file. They are still in their source files.
+These questions asked the same thing as one kept elsewhere in this file, so they were left out when the earlier question files were merged.
 
 | Removed | Same as |
 |---|---|

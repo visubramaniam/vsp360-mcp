@@ -3,7 +3,7 @@
 //   node tests/decision-report.mjs <log.jsonl> [--csv out.csv]
 // Calls the server could not tie to a recent search (see VSP360_DECISION_LINK_SECONDS)
 // are counted separately as unlinked calls.
-// Searches whose request matches a test-split question in tests/user-questions.tsv
+// Searches whose request matches a test-split question in tests/user-queries.md
 // are flagged (testQuestion) so they can be kept out of training.
 // Label (outcome) for each search, from what happened before the next search:
 //   called_top1   the top result was called (directly or after describing)
@@ -11,15 +11,12 @@
 //   called_absent an operation not in the results was called
 //   no_call       nothing was called (abandoned, or answered another way)
 import { readFileSync, writeFileSync } from "node:fs";
+import { norm, testSplit } from "./queries.mjs";
 
 const [file, flag, out] = process.argv.slice(2);
 if (!file) { console.error("usage: node tests/decision-report.mjs <log.jsonl> [--csv out.csv]"); process.exit(1); }
 
-const norm = (q) => q.toLowerCase().replace(/`[^`]*`/g, "").replace(/[^a-z0-9]+/g, " ").trim();
-const testQuestions = new Set(
-  readFileSync(new URL("./user-questions.tsv", import.meta.url), "utf8").split("\n").slice(1).filter(Boolean)
-    .map((l) => l.split("\t")).filter((c) => c[2] === "test").map((c) => norm(c[4])),
-);
+const testQuestions = testSplit();
 const events = readFileSync(file, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
 const searches = new Map(); // `${session}:${seq}` -> row
 for (const e of events) {

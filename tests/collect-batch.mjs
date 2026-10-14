@@ -1,9 +1,12 @@
-// Runs a file of user questions through Claude + the vsp360 MCP server, one
+// Runs the questions in one part of tests/user-queries.md through Claude + the vsp360 MCP server, one
 // fresh conversation per question, to fill a decision log without typing them.
 //
-//   ANTHROPIC_API_KEY=... node tests/collect-batch.mjs tests/user-questions-new.txt [options]
+//   ANTHROPIC_API_KEY=... node tests/collect-batch.mjs --part 4 [options]
 //
 // Options:
+//   --part N         the "## Part N" of user-queries.md to run: a batch part, or the labelled questions
+//                    (only their train split runs). Required.
+//   --file PATH      another file in the same format (default tests/user-queries.md)
 //   --dry-run        list the questions that would run (no Claude calls, no VSP 360 calls)
 //   --limit N        stop after N questions this run
 //   --only 3,7,12    run only these question numbers
@@ -16,17 +19,17 @@
 // - Each question gets its own vsp360 server process, started with the decision log
 //   and collection mode on and writes OFF, whatever the Claude Desktop config says.
 // - VSP 360 credentials are read from the env or the Claude Desktop config; never printed.
-// - Questions matching the test split of tests/user-questions.tsv are skipped.
-// - Progress is kept per questions file in reports/batch-state.json, so a rerun resumes where it stopped.
+// - Questions matching the test split of the labelled questions are skipped.
+// - Progress is kept per part in reports/batch-state.json, so a rerun resumes where it stopped.
 // - Each answer, its tool calls and token usage go to reports/batch-answers.jsonl.
 import { readFileSync, writeFileSync, appendFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import Anthropic from "@anthropic-ai/sdk";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { loadQueries, norm, testSplit as loadTestSplit, QUERIES_FILE } from "./queries.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const LOG = `${root}reports/decisions-batch.jsonl`;
@@ -38,8 +41,6 @@ const TOOL_TIMEOUT_MS = 300_000;
 
 // ---- arguments ----
 const argv = process.argv.slice(2);
-const VALUED = new Set(["--limit", "--only", "--model", "--effort", "--hint"]);
-const file = argv.find((a, i) => !a.startsWith("--") && !VALUED.has(argv[i - 1]));
 const opt = (name) => { const i = argv.indexOf(`--${name}`); return i >= 0 ? argv[i + 1] : undefined; };
 const dryRun = argv.includes("--dry-run");
 const limit = Number(opt("limit")) || Infinity;
@@ -48,31 +49,30 @@ const model = opt("model") ?? "claude-opus-5-5";
 const effort = opt("effort") ?? "medium";
 const hintMode = { off: "false", on: "true", ab: "ab" }[opt("hint") ?? "off"];
 if (!hintMode) { console.error("--hint must be off, on or ab"); process.exit(1); }
-if (!file) { console.error("usage: node tests/collect-batch.mjs <questions.txt> [--dry-run] [--limit N] [--only 1,2] [--model ID] [--effort LEVEL]"); process.exit(1); }
+const file = opt("file") ?? QUERIES_FILE;
+const part = Number(opt("part"));
 
-// ---- questions: "N. text" lines, under optional "## Section" headings ----
-const norm = (q) => q.toLowerCase().replace(/`[^`]*`/g, "").replace(/[^a-z0-9]+/g, " ").trim();
-const testSplit = new Set(
-  readFileSync(`${root}tests/user-questions.tsv`, "utf8").split("\n").slice(1).filter(Boolean)
-    .map((l) => l.split("\t")).filter((c) => c[2] === "test").map((c) => norm(c[4])),
-);
-let section = "";
-const questions = [];
-for (const line of readFileSync(file, "utf8").split("\n")) {
-  const h = line.match(/^##\s*(?:\d+\.\s*)?(.*)/);
-  if (h) { section = h[1].trim(); continue; }
-  const m = line.trim().match(/^(\d+)\.\s+(.+)/);
-  if (m) questions.push({ n: +m[1], section, text: m[2].trim() });
+// ---- questions: one part of user-queries.md ----
+const all = loadQueries(file);
+const parts = [...new Map(all.filter((q) => q.kind !== "regression").map((q) => [q.part, `Part ${q.part}: ${q.partTitle} (${q.kind})`])).values()];
+if (!part || !parts.some((p) => p.startsWith(`Part ${part}:`))) {
+  console.error(`usage: node tests/collect-batch.mjs --part N [--dry-run] [--limit N] [--only 1,2] [--model ID] [--effort LEVEL] [--hint off|on|ab]\nParts that can run:\n  ${parts.join("\n  ")}`);
+  process.exit(1);
 }
-// State is { files: { "<questions file name>": { done: { "<n>": "ok" } } } }. The first version kept a single
-// { done } for tests/user-questions-new.txt; carry it over to that file's entry.
+const testSplit = loadTestSplit(file);
+const questions = all.filter((q) => q.part === part).map((q) => ({ n: q.n, section: q.section, text: q.question }));
+const partTitle = all.find((q) => q.part === part).partTitle;
+// State is { files: { "<key>": { done: { "<n>": "ok" } } } }, keyed "part-N". Earlier versions keyed it by the
+// separate question files; those entries carry over to the parts that replaced them.
 const saved = existsSync(STATE) ? JSON.parse(readFileSync(STATE, "utf8")) : {};
 const allState = saved.files ? saved : { files: saved.done ? { "user-questions-new.txt": { done: saved.done } } : {} };
-const state = (allState.files[basename(file)] ??= { done: {} });
+const OLD_KEYS = { 3: "user-questions-new.txt", 4: "user-questions-batch.txt" };
+if (!allState.files[`part-${part}`] && allState.files[OLD_KEYS[part]]) allState.files[`part-${part}`] = allState.files[OLD_KEYS[part]];
+const state = (allState.files[`part-${part}`] ??= { done: {} });
 const todo = questions.filter((q) => !state.done[q.n] && !testSplit.has(norm(q.text)) && (!only || only.includes(q.n)));
 const skippedTest = questions.filter((q) => testSplit.has(norm(q.text)));
-console.log(`${questions.length} questions in ${file}: ${Object.keys(state.done).length} already done, ${skippedTest.length} skipped as test-split questions, ${todo.length} to run${limit < Infinity ? ` (limit ${limit})` : ""}`);
-if (skippedTest.length) console.log(`  skipped (test split): ${skippedTest.map((q) => q.n).join(", ")}`);
+const doneHere = questions.filter((q) => state.done[q.n]).length;
+console.log(`Part ${part} (${partTitle}): ${questions.length} questions, ${doneHere} already done, ${skippedTest.length} skipped as test-split questions, ${todo.length} to run${limit < Infinity ? ` (limit ${limit})` : ""}`);
 if (dryRun) { for (const q of todo.slice(0, limit)) console.log(`  ${q.n}. ${q.text}`); process.exit(0); }
 
 // ---- server environment: logging + collection on, writes off ----

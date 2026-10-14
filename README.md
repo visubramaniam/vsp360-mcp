@@ -51,7 +51,10 @@ The spec documents the Analytics query endpoint but not what it can query. Descr
 
 #### Measuring search
 
-`npm run eval` scores the search against 83 labelled development requests (45 held out from tuning) and 119 real user questions in `tests/user-questions.tsv` (79 held out); `EXAMPLES=0 npm run eval` measures it without the example questions.
+All user questions live in [`tests/user-queries.md`](tests/user-queries.md): regression prompts, labelled questions for evaluation and training, and batch questions for data collection.
+
+
+`npm run eval` scores the search against 83 labelled development requests (45 held out from tuning) and the 119 labelled user questions in `tests/user-queries.md` (79 held out); `EXAMPLES=0 npm run eval` measures it without the example questions.
 
 ## Safety: read-only by default
 
@@ -94,7 +97,7 @@ With `VSP360_DECISION_COLLECT=true` (and the log on), the server makes every que
 
 ### Batch collection
 
-`npm run collect-batch -- <questions.txt>` sends a file of numbered questions (`N. question`, optionally under `## Section` headings) to Claude through the API, one fresh conversation per question, with its own vsp360 server running read-only in collection mode. It needs an Anthropic API key (`ANTHROPIC_API_KEY`; usage is billed), skips questions in the test split of `tests/user-questions.tsv`, resumes where it stopped, and writes to `reports/decisions-batch.jsonl` (decisions) and `reports/batch-answers.jsonl` (answers, which contain live VSP 360 data). `--dry-run` lists what would run; `--limit N`, `--only 1,2`, `--model` and `--effort` adjust a run.
+`npm run collect-batch -- --part N` sends the questions in one part of `tests/user-queries.md` to Claude through the API, one fresh conversation per question, with its own vsp360 server running read-only in collection mode. It needs an Anthropic API key (`ANTHROPIC_API_KEY`; usage is billed), skips the held-out test questions, resumes where it stopped, and writes to `reports/decisions-batch.jsonl` (decisions) and `reports/batch-answers.jsonl` (answers, which contain live VSP 360 data). `--dry-run` lists what would run; `--limit N`, `--only 1,2`, `--model` and `--effort` adjust a run.
 
 ### Training the learned hint
 
@@ -102,7 +105,7 @@ With `VSP360_DECISION_COLLECT=true` (and the log on), the server makes every que
 
 ### Reports
 
-`npm run decision-report -- <log.jsonl> [--csv out.csv]` turns the log into one row per search, labelled with what happened next (top result called, another result called, an operation not in the results called, or nothing called). Searches whose `request` matches a test-split question in `tests/user-questions.tsv` are flagged so they can be kept out of training. When the hint runs in `ab` mode, the report also compares sessions that saw it with sessions that did not. `npm run train-decision` trains the model on these rows and compares it with the confidence thresholds on held-out questions.
+`npm run decision-report -- <log.jsonl> [--csv out.csv]` turns the log into one row per search, labelled with what happened next (top result called, another result called, an operation not in the results called, or nothing called). Searches whose `request` matches a held-out test question in `tests/user-queries.md` are flagged so they can be kept out of training. When the hint runs in `ab` mode, the report also compares sessions that saw it with sessions that did not. `npm run train-decision` trains the model on these rows and compares it with the confidence thresholds on held-out questions.
 
 ## Setup
 

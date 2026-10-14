@@ -52,7 +52,7 @@ evaluate("Tuning set", CASES);
 evaluate("Held-out set", HELD_OUT);
 evaluate("Held-out set 2", HELD_OUT_2);
 
-// Real user questions (tests/user-questions.tsv: n, section, split, expected, question),
+// Real user questions: the labelled part of tests/user-queries.md (n, section, split, expected, question),
 // labelled per question. expected is operationIds separated by |, or ANALYTICS, NONE or META. Only the
 // "test" split is scored by default; SPLIT=train scores the tuning split instead.
 // Each question is judged by what a good answer needs:
