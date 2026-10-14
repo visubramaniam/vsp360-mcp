@@ -14,6 +14,7 @@ import { Spec, type Operation, fileFields, isMultipart, toolParamName } from "./
 import { Vsp360Client, loadConfig, type CallArgs } from "./client.js";
 import { OperationIndex, analyticsHint } from "./search.js";
 import { DecisionLog } from "./decisionlog.js";
+import { features as decisionFeatures, predict, type Decision, type DecisionModel } from "./decision.js";
 
 type Json = any;
 
@@ -23,6 +24,13 @@ const allowWrites = process.env.VSP360_ALLOW_WRITES === "true";
 // Example user questions per operation sharpen search; VSP360_EXAMPLES="" turns them off.
 const examplesPath = process.env.VSP360_EXAMPLES ?? join(here, "..", "spec", "examples.json");
 const examples: Record<string, string[]> = examplesPath && existsSync(examplesPath) ? JSON.parse(readFileSync(examplesPath, "utf8")) : {};
+// Learned decision model: suggests what to do with a search result. Shown only when VSP360_DECISION_HINT is
+// "true", or in a random half of server sessions when it is "ab"; predicted and logged whenever the
+// decision log is on, so sessions with and without the hint can be compared.
+const hintMode = process.env.VSP360_DECISION_HINT ?? "false";
+const modelPath = process.env.VSP360_DECISION_MODEL ?? join(here, "..", "spec", "decision-model.json");
+const decisionModel: DecisionModel | undefined = existsSync(modelPath) ? JSON.parse(readFileSync(modelPath, "utf8")) : undefined;
+const showHint = !!decisionModel && (hintMode === "true" || (hintMode === "ab" && Math.random() < 0.5));
 const index = new OperationIndex(spec.operations.values(), examples);
 const decisions = new DecisionLog(process.env.VSP360_DECISION_LOG || undefined, Number(process.env.VSP360_DECISION_LINK_SECONDS) || 120);
 // Collection mode: every search must carry the user's request, and every call must be to an operation that
@@ -198,14 +206,20 @@ function listOperations(args: Json) {
     return text(`${ops.length} operation(s) in ${ops[0].tag}:\n${ops.map((op) => "- " + fmt(op)).join("\n")}`);
   }
   const limit = Math.min(Math.max(Number(args.limit) || 10, 1), 40);
-  const { hits, confidence, reason, lead, coverage, intent } = index.search(query, { tag: tag || undefined, limit });
+  const result = index.search(query, { tag: tag || undefined, limit });
+  const { hits, confidence, reason, lead, coverage, intent } = result;
   const hint = confidence !== "high" ? analyticsHint(query) : null;
+  const suggestion = decisionModel && hits.length && (showHint || decisions.enabled) ? predict(decisionModel, decisionFeatures(query, result, !!hint)) : undefined;
   const request = typeof args.request === "string" && args.request.trim() ? args.request.trim() : undefined;
   if (collect && !request) {
     decisions.refused({ tool: "vsp360_list_operations", reason: "no_request" });
     return text("Data collection mode: pass `request` with the user's question in their own words, then search again.", true);
   }
-  decisions.search({ query, request, tag: tag || undefined, confidence, lead, coverage, intent, analyticsHint: !!hint, hits: hits.map((h) => ({ id: h.op.operationId, score: h.score })) });
+  decisions.search({
+    query, request, tag: tag || undefined, confidence, lead, coverage, intent, analyticsHint: !!hint,
+    hits: hits.map((h) => ({ id: h.op.operationId, score: h.score })),
+    ...(suggestion ? { suggestion: { decision: suggestion.decision, p: +suggestion.p.toFixed(3), shown: showHint } } : {}),
+  });
   if (!hits.length) return text("No operations matched. Try other words, or call with no arguments to see the API areas.");
   const advice = {
     high: "Use the top result; describe it first if you need its parameters.",
@@ -213,7 +227,17 @@ function listOperations(args: Json) {
     low: "Results are ambiguous. Describe the top 2–3 candidates and pick by their descriptions, or refine the query with more specific words.",
   }[confidence];
   const lines = hits.map((h, i) => `${i + 1}. ${fmt(h.op)}  (score ${h.score.toFixed(2)}; matched: ${h.matched.join(", ")})`);
-  return text(`Confidence: ${confidence.toUpperCase()}: ${reason}.\n${advice}${hint ? "\n" + hint : ""}\n\n${lines.join("\n")}`);
+  const suggested = showHint && suggestion ? `\nSuggested next step (learned model, p=${suggestion.p.toFixed(2)}): ${suggestionText(suggestion.decision, hits[0].op.operationId)}` : "";
+  return text(`Confidence: ${confidence.toUpperCase()}: ${reason}.\n${advice}${hint ? "\n" + hint : ""}${suggested}\n\n${lines.join("\n")}`);
+}
+
+function suggestionText(d: Decision, top: string): string {
+  return {
+    call: `use ${top}.`,
+    compare: "describe the top 2-3 results and pick by their descriptions.",
+    analytics: "answer with analyticsRunQuery (MQL); describe it for the syntax.",
+    not_found: "none of these is likely right. Search again with different words, or tell the user the API may not cover this.",
+  }[d];
 }
 
 function describeOperation(args: Json) {
@@ -299,5 +323,6 @@ await server.connect(new StdioServerTransport());
 console.error(
   `[vsp360-mcp] ready: ${spec.operations.size} operations, ${directOps.size} direct tools, ${allowWrites ? "read/write" : "read-only"}` +
     (decisions.enabled ? `, decision log on` : "") +
-    (collect ? `, collection mode on (${collectSeconds}s window)` : ""),
+    (collect ? `, collection mode on (${collectSeconds}s window)` : "") +
+    (showHint ? ", decision hint on" : hintMode !== "false" && !decisionModel ? ", decision hint off (no model file)" : hintMode === "ab" ? ", decision hint off (A/B control)" : ""),
 );

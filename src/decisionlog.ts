@@ -33,7 +33,7 @@ export class DecisionLog {
     return !!this.path;
   }
 
-  search(e: { query: string; request?: string; tag?: string; confidence: string; lead: number | null; coverage: number; intent: string | null; analyticsHint: boolean; hits: { id: string; score: number }[] }): void {
+  search(e: { query: string; request?: string; tag?: string; confidence: string; lead: number | null; coverage: number; intent: string | null; analyticsHint: boolean; hits: { id: string; score: number }[]; suggestion?: { decision: string; p: number; shown: boolean } }): void {
     if (!this.path) return;
     const seq = this.write({ event: "search", ...e, hits: e.hits.map((h) => ({ id: h.id, score: +h.score.toFixed(3) })) });
     this.lastSearch = { seq, ids: e.hits.map((h) => h.id), at: Date.now() };

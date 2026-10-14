@@ -28,6 +28,7 @@ for (const e of events) {
     searches.set(key, {
       ts: e.ts, session: e.session, query: e.query, request: e.request ?? "", testQuestion: !!e.request && testQuestions.has(norm(e.request)), tag: e.tag ?? "", confidence: e.confidence,
       lead: e.lead, coverage: e.coverage, intent: e.intent ?? "", analyticsHint: e.analyticsHint,
+      suggested: e.suggestion?.decision ?? "", suggestedP: e.suggestion?.p ?? "", hintShown: e.suggestion ? e.suggestion.shown : "",
       top1: e.hits[0]?.id ?? "", nHits: e.hits.length, described: 0, calledId: "", calledRank: "", callOk: "", outcome: "no_call",
     });
     continue;
@@ -58,6 +59,25 @@ const misses = rows.filter((r) => r.outcome === "called_other" || r.outcome === 
 if (misses.length) {
   console.log("\nSearches where the called operation was not the top result:");
   for (const r of misses) console.log(`  [${r.confidence}] "${r.query}"${r.request ? ` (asked: "${r.request}")` : ""} → called ${r.calledId} (rank ${r.calledRank || "–"}); top was ${r.top1}`);
+}
+
+// A/B view of the learned decision hint (VSP360_DECISION_HINT=ab): sessions that saw it vs. sessions that
+// did not. Per question (session): did Claude end up calling something, and how many searches did it take.
+const withSuggestion = rows.filter((r) => r.suggested);
+if (withSuggestion.length) {
+  console.log("\nDecision hint (learned model):");
+  const sessionsBy = (shown) => [...new Set(withSuggestion.filter((r) => r.hintShown === shown).map((r) => r.session))];
+  for (const [label, shown] of [["shown", true], ["not shown", false]]) {
+    const ss = sessionsBy(shown);
+    if (!ss.length) continue;
+    const per = ss.map((s) => rows.filter((r) => r.session === s));
+    const called = per.filter((rs) => rs.some((r) => r.calledId)).length;
+    const searchesPer = per.reduce((a, rs) => a + rs.length, 0) / ss.length;
+    const firstTop1 = per.filter((rs) => rs[0].outcome === "called_top1").length;
+    console.log(`  ${label.padEnd(9)} ${String(ss.length).padStart(3)} sessions: something called in ${called}, first search's top result called in ${firstTop1}, ${searchesPer.toFixed(1)} searches per session`);
+  }
+  const agree = (r) => (r.suggested === "call" ? r.outcome === "called_top1" : r.suggested === "compare" ? r.outcome === "called_other" && +r.calledRank <= 3 : r.suggested === "analytics" ? r.calledId === "analyticsRunQuery" : r.outcome === "no_call" || r.outcome === "called_absent");
+  console.log(`  suggestion matched what happened next in ${withSuggestion.filter(agree).length} of ${withSuggestion.length} searches`);
 }
 
 if (flag === "--csv" && out) {

@@ -42,6 +42,10 @@ Argument values, request and response bodies, headers and credentials are never 
 
 **Collection mode.** With `VSP360_DECISION_COLLECT=true` (and the log on), the server makes every question produce a labelled search: a search with `query` must also carry `request`, and `vsp360_call_operation` (or a direct tool) is refused unless the operation appeared in a search result within the last `VSP360_DECISION_COLLECT_SECONDS` (default 600). Refusals are logged. Claude is slower in this mode, so turn it on for a data-collection period and off afterwards; turning writes off (`VSP360_ALLOW_WRITES` unset) for the period is also a good idea.
 
+**Batch collection.** `npm run collect-batch -- <questions.txt>` sends a file of numbered questions (`N. question`, optionally under `## Section` headings) to Claude through the API, one fresh conversation per question, with its own vsp360 server running read-only in collection mode. It needs an Anthropic API key (`ANTHROPIC_API_KEY`; usage is billed), skips questions in the test split of `tests/user-questions.tsv`, resumes where it stopped, and writes to `reports/decisions-batch.jsonl` (decisions) and `reports/batch-answers.jsonl` (answers, which contain live VSP 360 data). `--dry-run` lists what would run; `--limit N`, `--only 1,2`, `--model` and `--effort` adjust a run.
+
+**Decision hint (experimental).** `spec/decision-model.json` is a small learned model (`npm run train-decision -- --write` rebuilds it) that suggests what to do with a search result: call the top operation, compare the top few, use Analytics, or search again. With `VSP360_DECISION_HINT=true` the suggestion is added under the search results; with `ab` it is shown in a random half of server sessions, so the decision log can compare sessions with and without it. While the log is on, the prediction is recorded either way. `collect-batch` takes `--hint off|on|ab`.
+
 `npm run decision-report -- <log.jsonl> [--csv out.csv]` turns the log into one row per search, labelled with what happened next (top result called, another result called, an operation not in the results called, or nothing called). Searches whose `request` matches a test-split question in `tests/user-questions.tsv` are flagged so they can be kept out of training. Those rows are the training and test data for replacing the fixed confidence thresholds with a learned decision model.
 
 ## Safety: read-only by default
@@ -127,6 +131,7 @@ To try the tools interactively, run `npm run inspect`. It opens the MCP Inspecto
 | `VSP360_DECISION_LOG` | *(off)* | Path to a JSON Lines file. When set, each search, describe and call is logged locally (see [Decision log](#decision-log)). |
 | `VSP360_DECISION_COLLECT` | `false` | `true` turns on collection mode (needs `VSP360_DECISION_LOG`); see [Decision log](#decision-log). |
 | `VSP360_DECISION_COLLECT_SECONDS` | `600` | In collection mode, how long a search result keeps its operations callable. |
+| `VSP360_DECISION_HINT` | `false` | `true` adds the learned model's suggested next step to search results; `ab` does so in a random half of sessions. |
 | `VSP360_DECISION_LINK_SECONDS` | `120` | A describe or call is tied to the latest search only if it starts within this many seconds of it. |
 | `VSP360_EXAMPLES` | bundled `spec/examples.json` | Example user questions per operation, used to rank search results. Set to an empty string to turn them off. |
 | `VSP360_SPEC` | bundled spec | Path to a different OpenAPI file, e.g. a newer VSP 360 release |
