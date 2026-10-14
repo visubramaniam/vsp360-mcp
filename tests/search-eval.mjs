@@ -64,9 +64,44 @@ const HELD_OUT = [
   ["list groups", ["vsp360ListIdentityGroups"]],
 ];
 
+// Second held-out set: written and committed before the example-question index
+// existed, phrased the way an operator would ask, and never used for tuning.
+const HELD_OUT_2 = [
+  ["who changed the snapshot schedule last week", ["protectionListPolicyAudit"]],
+  ["mount a snapshot to a host for restore testing", ["protectionMountCopy"]],
+  ["roll a volume back to an earlier snapshot", ["protectionRevertCopy"]],
+  ["make the remote site the primary for a gad pair", ["protectionSwapCopy"]],
+  ["run the backup policy right now", ["protectionTriggerPolicy"]],
+  ["change how long local snapshots are kept", ["protectionModifyLocalCopyRetention"]],
+  ["which nodes make up the kubernetes cluster", ["vsp360GetClusterNodes"]],
+  ["why is a pod crashing", ["vsp360GetClusterPodsByNamespaceByNameDescribe"]],
+  ["when does the tls certificate expire", ["vsp360GetCertificate"]],
+  ["replace the web certificate with one signed by our ca", ["vsp360PostCertificate"]],
+  ["enable two factor authentication", ["vsp360UpdateAuthenticationSettingsOTP"]],
+  ["reset a user's password", ["vsp360ReplaceIdentityUserPassword", "vsp360PutPamUsersByUserIdPassword"]],
+  ["update the stored password vsp 360 uses to log in to an array", ["vsp360PutPamDevicesByVsp360DeviceIdCredentials"]],
+  ["add a user to the storage admins group", ["vsp360AddIdentityUserToGroup"]],
+  ["which groups is a user in", ["vsp360ListIdentityUserGroups"]],
+  ["give a group read access to one array", ["vsp360PostGroupsByGroupAccessResources"]],
+  ["onboard an hnas file server", ["vsp360PostExternalAppsByAppTypeOnboard"]],
+  ["tag a storage system with its site name", ["vsp360PatchDevicesByIdTags"]],
+  ["history of changes for array serial 840477", ["vsp360GetDevicesReport"]],
+  ["migrate volumes to a new array without downtime", ["orchestrationExecuteNdm"]],
+  ["remove a lun from a host", ["orchestrationExecuteUnassignLun"]],
+  ["is there enough cluster capacity to apply the upgrade", ["vsp360GetUpgradesResourcesValidate"]],
+  ["switch the deployment to the large profile", ["vsp360PostProfileSwitches"]],
+  ["show the secret for a service account", ["vsp360GetServiceAccountSecret"]],
+  ["configure saml login with okta", ["vsp360CreateIdentityProvider"]],
+  ["map ad groups to vsp 360 groups", ["vsp360CreateDirectoryMapper"]],
+  ["give more memory to a workload that keeps getting oom killed", ["vsp360PatchVpasByNamespaceByNameResources"]],
+  ["cancel a running analytics query", ["analyticsQueryAction"]],
+  ["what billing reports have been downloaded", ["vsp360GetHroDownloadHistory"]],
+  ["delete the upgrade package i staged by mistake", ["vsp360DeleteUpgradesPending"]],
+];
+
 const spec = new Spec(new URL("../spec/vsp360-openapi.yaml", import.meta.url).pathname);
 const ops = [...spec.operations.values()];
-for (const [, want] of [...CASES, ...HELD_OUT]) for (const id of want) if (!spec.operations.has(id)) throw new Error(`Unknown expected id ${id}`);
+for (const [, want] of [...CASES, ...HELD_OUT, ...HELD_OUT_2]) for (const id of want) if (!spec.operations.has(id)) throw new Error(`Unknown expected id ${id}`);
 const index = new OperationIndex(ops);
 
 // Baseline: the original filter (every query word must appear somewhere), in catalogue order.
@@ -101,3 +136,4 @@ for (const [q, ro, on, rb, c, top] of rows) if (rb !== 1) console.log(`  [${c}] 
 }
 evaluate("Tuning set", CASES);
 evaluate("Held-out set", HELD_OUT);
+evaluate("Held-out set 2", HELD_OUT_2);
