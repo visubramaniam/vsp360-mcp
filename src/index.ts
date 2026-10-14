@@ -206,8 +206,11 @@ function listOperations(args: Json) {
     return text(`${ops.length} operation(s) in ${ops[0].tag}:\n${ops.map((op) => "- " + fmt(op)).join("\n")}`);
   }
   const limit = Math.min(Math.max(Number(args.limit) || 10, 1), 40);
-  const result = index.search(query, { tag: tag || undefined, limit });
-  const { hits, confidence, reason, lead, coverage, intent } = result;
+  // The decision model was trained on 10-result searches, so its features always come from at least that many;
+  // only the first `limit` hits are shown and logged.
+  const result = index.search(query, { tag: tag || undefined, limit: Math.max(limit, 10) });
+  const { confidence, reason, lead, coverage, intent } = result;
+  const hits = result.hits.slice(0, limit);
   const hint = confidence !== "high" ? analyticsHint(query) : null;
   const suggestion = decisionModel && hits.length && (showHint || decisions.enabled) ? predict(decisionModel, decisionFeatures(query, result, !!hint)) : undefined;
   const request = typeof args.request === "string" && args.request.trim() ? args.request.trim() : undefined;
