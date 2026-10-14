@@ -18,9 +18,17 @@ For the areas you use most, set `VSP360_TOOLSETS` to add **direct tools**: one t
 VSP360_TOOLSETS="Device Registry,Platform Alerts,VSP 360 Cluster Health"
 ```
 
-### How `vsp360_list_operations` ranks results
+### How `vsp360_list_operations` finds operations
 
-A `query` is ranked with **BM25** over each operation's ID, summary, tag, path, description and a set of **example questions** (`spec/examples.json`), so plain-language requests work ("volumes with no host path", "silence alerts"). The ranking has five refinements:
+A search goes through three steps. Only the first one ranks; the other two add advice to the ranked list.
+
+1. **BM25 ranking** picks and orders the operations.
+2. **A confidence rating** (HIGH, MEDIUM or LOW) says how far to trust the top result.
+3. **An optional learned hint** suggests what to do next. It is off unless `VSP360_DECISION_HINT` is set.
+
+#### 1. BM25 ranking
+
+A `query` is ranked with **BM25** over each operation's ID, summary, tag, path, description and a set of **example questions** (`spec/examples.json`), so plain-language requests work ("volumes with no host path", "silence alerts"). The ranking has six refinements:
 
 - **Fields are weighted:** words in the summary and ID count more than words in the description.
 - **camelCase is split and light stemming is applied.**
@@ -29,24 +37,17 @@ A `query` is ranked with **BM25** over each operation's ID, summary, tag, path, 
 - **List-style requests prefer collection endpoints** over `{id}` endpoints.
 - **Example questions bridge operator wording and API wording:** each operation has a few questions an operator might ask, such as "take a snapshot now outside the schedule" for `protectionTriggerPolicy`. Set `VSP360_EXAMPLES` to another file to use your own, or to an empty string to turn them off.
 
-Each result set carries a **confidence** of HIGH, MEDIUM or LOW, based on how far the top hit leads the next and how much of the request's own wording it matches. The rating comes with advice: call the top result, check its description, or describe the top two or three. When a LOW or MEDIUM result looks like a performance or topology question, the response points to `analyticsRunQuery`. `npm run eval` scores the search against 83 labelled development requests (45 held out from tuning) and 119 real user questions in `tests/user-questions.tsv` (79 held out); `EXAMPLES=0 npm run eval` measures it without the example questions.
+#### 2. Confidence rating
 
-### Decision log
+Each result set carries a **confidence** of HIGH, MEDIUM or LOW, based on how far the top hit leads the next and how much of the request's own wording it matches. The rating comes with advice: call the top result, check its description, or describe the top two or three. When a LOW or MEDIUM result looks like a performance or topology question, the response points to `analyticsRunQuery`.
 
-Set `VSP360_DECISION_LOG` to a file path to record, locally, how search results are used:
+#### 3. Learned hint (optional)
 
-- **For each search:** the query and, if Claude passes it, the user's own request that led to the search (the `request` argument, offered only while the log is on and never used for ranking); the confidence rating and the signals behind it (lead, coverage, intent, the analytics hint), and the ranked operationIds.
-- **For each describe or call:** the operationId, its rank in the most recent search if it started within `VSP360_DECISION_LINK_SECONDS` of it (otherwise it is logged as unlinked), the seconds since that search, the HTTP status and the duration. Calls also record the *names* of the arguments used.
+With `VSP360_DECISION_HINT=true`, a line under the results suggests what to do with them: call the top operation, compare the top few, answer with Analytics, or search again. It comes from a small model in `spec/decision-model.json`, trained on logged searches (see [Improving search](#improving-search-logging-and-the-learned-hint)). It never changes the ranking. With `ab`, it is shown in a random half of server sessions so the two can be compared.
 
-Argument values, request and response bodies, headers and credentials are never logged. The query text is logged as typed, so treat the file as you would chat history.
+#### Measuring search
 
-**Collection mode.** With `VSP360_DECISION_COLLECT=true` (and the log on), the server makes every question produce a labelled search: a search with `query` must also carry `request`, and `vsp360_call_operation` (or a direct tool) is refused unless the operation appeared in a search result within the last `VSP360_DECISION_COLLECT_SECONDS` (default 600). Refusals are logged. Claude is slower in this mode, so turn it on for a data-collection period and off afterwards; turning writes off (`VSP360_ALLOW_WRITES` unset) for the period is also a good idea.
-
-**Batch collection.** `npm run collect-batch -- <questions.txt>` sends a file of numbered questions (`N. question`, optionally under `## Section` headings) to Claude through the API, one fresh conversation per question, with its own vsp360 server running read-only in collection mode. It needs an Anthropic API key (`ANTHROPIC_API_KEY`; usage is billed), skips questions in the test split of `tests/user-questions.tsv`, resumes where it stopped, and writes to `reports/decisions-batch.jsonl` (decisions) and `reports/batch-answers.jsonl` (answers, which contain live VSP 360 data). `--dry-run` lists what would run; `--limit N`, `--only 1,2`, `--model` and `--effort` adjust a run.
-
-**Decision hint (experimental).** `spec/decision-model.json` is a small learned model (`npm run train-decision -- --write` rebuilds it) that suggests what to do with a search result: call the top operation, compare the top few, use Analytics, or search again. With `VSP360_DECISION_HINT=true` the suggestion is added under the search results; with `ab` it is shown in a random half of server sessions, so the decision log can compare sessions with and without it. While the log is on, the prediction is recorded either way. `collect-batch` takes `--hint off|on|ab`.
-
-`npm run decision-report -- <log.jsonl> [--csv out.csv]` turns the log into one row per search, labelled with what happened next (top result called, another result called, an operation not in the results called, or nothing called). Searches whose `request` matches a test-split question in `tests/user-questions.tsv` are flagged so they can be kept out of training. Those rows are the training and test data for replacing the fixed confidence thresholds with a learned decision model.
+`npm run eval` scores the search against 83 labelled development requests (45 held out from tuning) and 119 real user questions in `tests/user-questions.tsv` (79 held out); `EXAMPLES=0 npm run eval` measures it without the example questions.
 
 ## Safety: read-only by default
 
@@ -69,6 +70,35 @@ All other operations are refused, and direct tools are not created for them. The
 - **Uploads:** Multipart operations take local file paths, for example `files: {"file": "~/devices.csv"}`. This applies to installing a TLS certificate, validating a bulk-registration CSV, and uploading an upgrade package. Files are streamed from disk, so 20 GB `.zst` upgrade packages don't need to fit in memory.
 - **TLS:** Use `VSP360_CA_CERT` for a private CA. Use `VSP360_INSECURE_TLS=true` only for lab systems with self-signed certificates.
 - **Large responses:** Responses longer than `VSP360_MAX_RESPONSE_CHARS` are truncated, with a note telling Claude how to narrow the request.
+
+## Improving search: logging and the learned hint
+
+These tools collect data on how Claude uses search results and train the learned hint from it. None of them is needed to use the server.
+
+### Decision log
+
+Set `VSP360_DECISION_LOG` to a file path to record, locally, how search results are used:
+
+- **For each search:** the query and, if Claude passes it, the user's own request that led to the search (the `request` argument, offered only while the log is on and never used for ranking); the confidence rating and the signals behind it (lead, coverage, intent, the analytics hint), and the ranked operationIds.
+- **For each describe or call:** the operationId, its rank in the most recent search if it started within `VSP360_DECISION_LINK_SECONDS` of it (otherwise it is logged as unlinked), the seconds since that search, the HTTP status and the duration. Calls also record the *names* of the arguments used.
+
+Argument values, request and response bodies, headers and credentials are never logged. The query text is logged as typed, so treat the file as you would chat history.
+
+### Collection mode
+
+With `VSP360_DECISION_COLLECT=true` (and the log on), the server makes every question produce a labelled search: a search with `query` must also carry `request`, and `vsp360_call_operation` (or a direct tool) is refused unless the operation appeared in a search result within the last `VSP360_DECISION_COLLECT_SECONDS` (default 600). Refusals are logged. Claude is slower in this mode, so turn it on for a data-collection period and off afterwards; turning writes off (`VSP360_ALLOW_WRITES` unset) for the period is also a good idea.
+
+### Batch collection
+
+`npm run collect-batch -- <questions.txt>` sends a file of numbered questions (`N. question`, optionally under `## Section` headings) to Claude through the API, one fresh conversation per question, with its own vsp360 server running read-only in collection mode. It needs an Anthropic API key (`ANTHROPIC_API_KEY`; usage is billed), skips questions in the test split of `tests/user-questions.tsv`, resumes where it stopped, and writes to `reports/decisions-batch.jsonl` (decisions) and `reports/batch-answers.jsonl` (answers, which contain live VSP 360 data). `--dry-run` lists what would run; `--limit N`, `--only 1,2`, `--model` and `--effort` adjust a run.
+
+### Training the learned hint
+
+`spec/decision-model.json` is a small learned model (`npm run train-decision -- --write` rebuilds it) that suggests what to do with a search result: call the top operation, compare the top few, use Analytics, or search again. With `VSP360_DECISION_HINT=true` the suggestion is added under the search results; with `ab` it is shown in a random half of server sessions, so the decision log can compare sessions with and without it. While the log is on, the prediction is recorded either way. `collect-batch` takes `--hint off|on|ab`.
+
+### Reports
+
+`npm run decision-report -- <log.jsonl> [--csv out.csv]` turns the log into one row per search, labelled with what happened next (top result called, another result called, an operation not in the results called, or nothing called). Searches whose `request` matches a test-split question in `tests/user-questions.tsv` are flagged so they can be kept out of training. When the hint runs in `ab` mode, the report also compares sessions that saw it with sessions that did not. `npm run train-decision` trains the model on these rows and compares it with the confidence thresholds on held-out questions.
 
 ## Setup
 
