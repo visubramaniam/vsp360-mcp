@@ -102,7 +102,13 @@ const HELD_OUT_2 = [
 const spec = new Spec(new URL("../spec/vsp360-openapi.yaml", import.meta.url).pathname);
 const ops = [...spec.operations.values()];
 for (const [, want] of [...CASES, ...HELD_OUT, ...HELD_OUT_2]) for (const id of want) if (!spec.operations.has(id)) throw new Error(`Unknown expected id ${id}`);
-const index = new OperationIndex(ops);
+import { readFileSync } from "node:fs";
+const examples = JSON.parse(readFileSync(new URL("../spec/examples.json", import.meta.url), "utf8"));
+for (const id of Object.keys(examples)) if (!id.startsWith("_") && !spec.operations.has(id)) throw new Error(`Unknown example id ${id}`);
+const missing = ops.filter((op) => !examples[op.operationId]).map((op) => op.operationId);
+if (missing.length) console.log(`Operations without examples: ${missing.join(", ")}`);
+// Set EXAMPLES=0 to measure plain BM25.
+const index = new OperationIndex(ops, process.env.EXAMPLES === "0" ? {} : examples);
 
 // Baseline: the original filter (every query word must appear somewhere), in catalogue order.
 const oldSearch = (q) => {

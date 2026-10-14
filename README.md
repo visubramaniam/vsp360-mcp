@@ -20,15 +20,16 @@ VSP360_TOOLSETS="Device Registry,Platform Alerts,VSP 360 Cluster Health"
 
 ### How `vsp360_list_operations` ranks results
 
-A `query` is ranked with **BM25** over each operation's ID, summary, tag, path and description, so plain-language requests work ("volumes with no host path", "silence alerts"). The ranking has five refinements:
+A `query` is ranked with **BM25** over each operation's ID, summary, tag, path, description and a set of **example questions** (`spec/examples.json`), so plain-language requests work ("volumes with no host path", "silence alerts"). The ranking has five refinements:
 
 - **Fields are weighted:** words in the summary and ID count more than words in the description.
 - **camelCase is split and light stemming is applied.**
 - **Storage vocabulary is mapped to API terms,** for example volume → ldev, LDAP → directories, ESXi → hypervisor.
 - **Verbs decide intent:** "list" and "show" favour read operations, while "delete", "start" and "register" favour write operations.
 - **List-style requests prefer collection endpoints** over `{id}` endpoints.
+- **Example questions bridge operator wording and API wording:** each operation has a few questions an operator might ask, such as "take a snapshot now outside the schedule" for `protectionTriggerPolicy`. Set `VSP360_EXAMPLES` to another file to use your own, or to an empty string to turn them off.
 
-Each result set carries a **confidence** of HIGH, MEDIUM or LOW, based on how far the top hit leads the next and how much of the request's own wording it matches. The rating comes with advice: call the top result, check its description, or describe the top two or three. When a LOW or MEDIUM result looks like a performance or topology question, the response points to `analyticsRunQuery`. `npm run eval` scores the search against 53 labelled requests, 15 of them held out from tuning.
+Each result set carries a **confidence** of HIGH, MEDIUM or LOW, based on how far the top hit leads the next and how much of the request's own wording it matches. The rating comes with advice: call the top result, check its description, or describe the top two or three. When a LOW or MEDIUM result looks like a performance or topology question, the response points to `analyticsRunQuery`. `npm run eval` scores the search against 83 labelled requests, 45 of them held out from tuning; `EXAMPLES=0 npm run eval` measures it without the example questions.
 
 ## Safety: read-only by default
 
@@ -110,6 +111,7 @@ To try the tools interactively, run `npm run inspect`. It opens the MCP Inspecto
 | `VSP360_MAX_RESPONSE_CHARS` | `60000` | Truncation limit for text responses |
 | `VSP360_DOWNLOAD_DIR` | `~/Downloads/vsp360-mcp` | Where binary downloads are saved |
 | `VSP360_PATH_REWRITES` | `/api/v1/protection=/dataprotection/api/v1/protection` | Gateway prefixes the spec leaves out, as comma-separated `/from=/to` pairs. The default makes the Data Protection operations reach `/dataprotection/...`. |
+| `VSP360_EXAMPLES` | bundled `spec/examples.json` | Example user questions per operation, used to rank search results. Set to an empty string to turn them off. |
 | `VSP360_SPEC` | bundled spec | Path to a different OpenAPI file, e.g. a newer VSP 360 release |
 
 ## Tag names for `VSP360_TOOLSETS`

@@ -4,7 +4,7 @@ import type { Operation } from "./spec.js";
 
 // Field weights: a term in the operationId or summary says more than one in a
 // long description. Implemented by repeating tokens (BM25F-lite).
-const FIELD_WEIGHTS = { operationId: 3, summary: 4, tag: 2, path: 2, description: 0.5 } as const;
+const FIELD_WEIGHTS = { operationId: 3, summary: 4, tag: 2, path: 2, description: 0.5, examples: 3 } as const;
 
 const K1 = 1.2;
 const B = 0.75;
@@ -106,7 +106,8 @@ export class OperationIndex {
   private df = new Map<string, number>();
   private avgLen = 0;
 
-  constructor(ops: Iterable<Operation>) {
+  /** `examples` maps operationIds to sample user questions, indexed as an extra field. */
+  constructor(ops: Iterable<Operation>, examples: Record<string, string[]> = {}) {
     for (const op of ops) {
       const tf = new Map<string, number>();
       const add = (text: string, weight: number) => {
@@ -117,6 +118,7 @@ export class OperationIndex {
       add(op.tag, FIELD_WEIGHTS.tag);
       add(op.path.replace(/\{[^}]+\}/g, " "), FIELD_WEIGHTS.path);
       add(op.description.slice(0, 1500), FIELD_WEIGHTS.description);
+      for (const q of examples[op.operationId] ?? []) add(q, FIELD_WEIGHTS.examples);
       const len = [...tf.values()].reduce((a, b) => a + b, 0);
       this.docs.push({ op, tf, len });
       for (const t of tf.keys()) this.df.set(t, (this.df.get(t) ?? 0) + 1);

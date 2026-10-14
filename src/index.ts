@@ -4,6 +4,7 @@
 // Every operation in the OpenAPI spec is reachable through three discovery
 // tools (list, describe, call). Selected tags can also be exposed as one
 // direct tool per operation with VSP360_TOOLSETS.
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -18,7 +19,10 @@ type Json = any;
 const here = dirname(fileURLToPath(import.meta.url));
 const spec = new Spec(process.env.VSP360_SPEC || join(here, "..", "spec", "vsp360-openapi.yaml"));
 const allowWrites = process.env.VSP360_ALLOW_WRITES === "true";
-const index = new OperationIndex(spec.operations.values());
+// Example user questions per operation sharpen search; VSP360_EXAMPLES="" turns them off.
+const examplesPath = process.env.VSP360_EXAMPLES ?? join(here, "..", "spec", "examples.json");
+const examples: Record<string, string[]> = examplesPath && existsSync(examplesPath) ? JSON.parse(readFileSync(examplesPath, "utf8")) : {};
+const index = new OperationIndex(spec.operations.values(), examples);
 const toolsets = (process.env.VSP360_TOOLSETS ?? "")
   .split(",")
   .map((s) => s.trim())
