@@ -20,7 +20,7 @@ The image runs the same server described in the [main README](README.md), with t
 docker pull docker.io/subramaniamv/vsp360-mcp:latest
 ```
 
-To pin a version instead of `latest`, use a release tag, for example `:0.1.4`.
+To pin a version instead of `latest`, use a release tag, for example `:0.1.5`.
 
 ## 3. Test it from the command line
 
@@ -105,6 +105,7 @@ The container can only see folders you mount into it with `-v host-folder:contai
 |---|---|---|
 | Downloads (diagnostic bundles, CSR ZIPs, billing reports, CSV exports) | `-v /Users/YOU/Downloads/vsp360-mcp:/downloads` | Saved to `/downloads`, which appears in the host folder |
 | Uploads (bulk-registration CSV, TLS certificate, upgrade package) | `-v /Users/YOU/vsp360-uploads:/uploads:ro` | `/uploads/devices.csv` |
+| Decision log (optional) | `-v /Users/YOU/vsp360-logs:/logs` plus `-e VSP360_DECISION_LOG=/logs/decisions.jsonl` | Written to `/logs`, which appears in the host folder |
 | Private CA certificate | `-v /Users/YOU/certs/vsp360-ca.pem:/certs/ca.pem:ro` plus `-e VSP360_CA_CERT=/certs/ca.pem` | n/a |
 
 Create the host folders before starting Claude. If Docker creates a missing host folder itself, it may be owned by root, and the container (which runs as user `node`, UID 1000) won't be able to write to it.
@@ -131,6 +132,7 @@ All the [environment variables in the main README](README.md#configuration) work
 | `VSP360_CA_CERT` | | Path *inside the container* to a CA certificate |
 | `VSP360_INSECURE_TLS` | `false` | Skips certificate checking; use on lab systems only |
 | `VSP360_DOWNLOAD_DIR` | `/downloads` | Already set in the image; mount a folder here |
+| `VSP360_DECISION_LOG` | *(off)* | Path *inside the container* to a JSON Lines file recording how search results are used; mount a folder for it (see [Files](#5-files-downloads-uploads-and-certificates)) |
 | `VSP360_SPEC` | bundled 1.4 spec | Use a different OpenAPI file (see below) |
 
 ### Using a newer VSP 360 spec
