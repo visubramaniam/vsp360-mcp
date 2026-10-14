@@ -68,12 +68,18 @@ function batchRows(path) {
     const platformForArray = /^vsp360Get(MetricsQuery|MetricsQueryRange|SystemInfo)$/.test(chosen ?? "") && /\b(pool|port|ldev|volume|array|host group|lun)s?\b/i.test(request);
     if (!chosen || platformForArray) { skipped += searches.length; continue; }
     const want = chosen === "analyticsRunQuery" ? ["ANALYTICS"] : [chosen];
-    for (const s of searches) out.push(row(s.query, want, "batch"));
+    // Hold out about a fifth of the questions, chosen by a hash of the question text so the split is stable
+    // across reruns and every search for one question lands on the same side.
+    const held = [...request].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7) % 5 === 0;
+    for (const s of searches) out.push({ ...row(s.query, want, held ? "batch-test" : "batch"), request });
   }
   console.log(`Batch log: ${out.length} labelled searches, ${skipped} skipped (no successful call, or platform metrics for an array question)`);
   return out;
 }
-train.push(...batchRows(new URL("../reports/decisions-batch.jsonl", import.meta.url)));
+const batch = batchRows(new URL("../reports/decisions-batch.jsonl", import.meta.url));
+train.push(...batch.filter((r) => r.source === "batch"));
+const batchTest = batch.filter((r) => r.source === "batch-test");
+console.log(`Batch split: ${batch.length - batchTest.length} searches for training, ${batchTest.length} held out (${new Set(batchTest.map((r) => r.request)).size} questions)`);
 
 // ---- multinomial logistic regression, full-batch gradient descent with L2 ----
 function fit(rows, lambda) {
@@ -132,6 +138,12 @@ console.log(`\nTraining rows: ${train.length}   test rows: ${test.length}   chos
 console.log(`Right decisions in the test set: ${DECISIONS.map((d) => `${d} ${test.filter((r) => r.y === d).length}`).join(", ")}`);
 report("Fixed thresholds (current)", test, (r) => r.base);
 report("Decision model", test, (r) => predict(model, r.x).decision);
+if (batchTest.length) {
+  console.log(`\n--- Held-out batch searches (Claude's own queries, labelled by what it called): ${batchTest.length}`);
+  console.log(`Right decisions: ${DECISIONS.map((d) => `${d} ${batchTest.filter((r) => r.y === d).length}`).join(", ")}`);
+  report("Fixed thresholds (current)", batchTest, (r) => r.base);
+  report("Decision model", batchTest, (r) => predict(model, r.x).decision);
+}
 
 console.log("\nLargest weights per decision (standardised features):");
 model.classes.forEach((c, k) => {
