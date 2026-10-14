@@ -1,8 +1,9 @@
 // Trains the search decision model and compares it with the fixed confidence
 // thresholds. Run after `npm run build`:  node tests/train-decision.mjs [--write]
 //
-// Training data: the user-question "train" split plus the tuning and held-out
-// request sets written during development. Test data: the user-question "test"
+// Training data: the user-question "train" split, the tuning and held-out
+// request sets written during development, and (unless BATCH=0) the searches in
+// reports/decisions-batch.jsonl labelled by what Claude went on to call. Test data: the user-question "test"
 // split only, which is never used for training or for choosing settings.
 // --write saves the model to spec/decision-model.json.
 import { readFileSync, writeFileSync } from "node:fs";
@@ -46,6 +47,33 @@ const train = [
   ...user.filter((r) => r.split === "train").map((r) => row(r.question, r.want, "user-train")),
 ];
 const test = user.filter((r) => r.split === "test").map((r) => row(r.question, r.want, "user-test"));
+
+// Logged batch searches. Each is re-run with the current index on Claude's own query (what the
+// server actually sees), and labelled by the first operation Claude called successfully for that
+// question: an Analytics query means "analytics", otherwise its rank decides call / compare /
+// not_found. Questions with no successful call are skipped (nothing to learn), as are questions
+// about array objects that Claude answered with VSP 360's own platform metrics (a wrong choice).
+function batchRows(path) {
+  if (process.env.BATCH === "0") return [];
+  let lines;
+  try { lines = readFileSync(path, "utf8").split("\n").filter(Boolean); } catch { return []; }
+  const sessions = new Map();
+  for (const e of lines.map((l) => JSON.parse(l))) (sessions.get(e.session) ?? sessions.set(e.session, []).get(e.session)).push(e);
+  const out = [];
+  let skipped = 0;
+  for (const events of sessions.values()) {
+    const searches = events.filter((e) => e.event === "search");
+    const chosen = events.find((e) => e.event === "call" && e.ok)?.operationId;
+    const request = searches[0]?.request ?? "";
+    const platformForArray = /^vsp360Get(MetricsQuery|MetricsQueryRange|SystemInfo)$/.test(chosen ?? "") && /\b(pool|port|ldev|volume|array|host group|lun)s?\b/i.test(request);
+    if (!chosen || platformForArray) { skipped += searches.length; continue; }
+    const want = chosen === "analyticsRunQuery" ? ["ANALYTICS"] : [chosen];
+    for (const s of searches) out.push(row(s.query, want, "batch"));
+  }
+  console.log(`Batch log: ${out.length} labelled searches, ${skipped} skipped (no successful call, or platform metrics for an array question)`);
+  return out;
+}
+train.push(...batchRows(new URL("../reports/decisions-batch.jsonl", import.meta.url)));
 
 // ---- multinomial logistic regression, full-batch gradient descent with L2 ----
 function fit(rows, lambda) {
