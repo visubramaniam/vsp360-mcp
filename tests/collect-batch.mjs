@@ -17,10 +17,11 @@
 //   and collection mode on and writes OFF, whatever the Claude Desktop config says.
 // - VSP 360 credentials are read from the env or the Claude Desktop config; never printed.
 // - Questions matching the test split of tests/user-questions.tsv are skipped.
-// - Progress is kept in reports/batch-state.json, so a rerun resumes where it stopped.
+// - Progress is kept per questions file in reports/batch-state.json, so a rerun resumes where it stopped.
 // - Each answer, its tool calls and token usage go to reports/batch-answers.jsonl.
 import { readFileSync, writeFileSync, appendFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
+import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import Anthropic from "@anthropic-ai/sdk";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -60,7 +61,11 @@ for (const line of readFileSync(file, "utf8").split("\n")) {
   const m = line.trim().match(/^(\d+)\.\s+(.+)/);
   if (m) questions.push({ n: +m[1], section, text: m[2].trim() });
 }
-const state = existsSync(STATE) ? JSON.parse(readFileSync(STATE, "utf8")) : { done: {} };
+// State is { files: { "<questions file name>": { done: { "<n>": "ok" } } } }. The first version kept a single
+// { done } for tests/user-questions-new.txt; carry it over to that file's entry.
+const saved = existsSync(STATE) ? JSON.parse(readFileSync(STATE, "utf8")) : {};
+const allState = saved.files ? saved : { files: saved.done ? { "user-questions-new.txt": { done: saved.done } } : {} };
+const state = (allState.files[basename(file)] ??= { done: {} });
 const todo = questions.filter((q) => !state.done[q.n] && !testSplit.has(norm(q.text)) && (!only || only.includes(q.n)));
 const skippedTest = questions.filter((q) => testSplit.has(norm(q.text)));
 console.log(`${questions.length} questions in ${file}: ${Object.keys(state.done).length} already done, ${skippedTest.length} skipped as test-split questions, ${todo.length} to run${limit < Infinity ? ` (limit ${limit})` : ""}`);
@@ -153,7 +158,7 @@ for (const q of todo) {
     if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) process.exit(1);
     if (e instanceof Anthropic.RateLimitError) { console.error("Rate limited; rerun later to resume."); break; }
   }
-  writeFileSync(STATE, JSON.stringify(state, null, 1));
+  writeFileSync(STATE, JSON.stringify(allState, null, 1));
   ran++;
 }
 const cost = PRICE ? ` ≈ $${((spent.input * PRICE[0] + spent.output * PRICE[1]) / 1e6).toFixed(2)} at list price` : "";
