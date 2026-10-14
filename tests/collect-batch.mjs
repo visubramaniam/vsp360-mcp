@@ -25,6 +25,7 @@ import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import Anthropic from "@anthropic-ai/sdk";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -32,6 +33,8 @@ const LOG = `${root}reports/decisions-batch.jsonl`;
 const STATE = `${root}reports/batch-state.json`;
 const ANSWERS = `${root}reports/batch-answers.jsonl`;
 const MAX_TURNS = 15;
+// VSP 360 log and analytics queries over long windows can take minutes; the MCP client default is 60 s.
+const TOOL_TIMEOUT_MS = 300_000;
 
 // ---- arguments ----
 const argv = process.argv.slice(2);
@@ -121,7 +124,13 @@ async function ask(q) {
       if (stop !== "tool_use" || !uses.length) { answer = res.content.filter((b) => b.type === "text").map((b) => b.text).join("\n"); break; }
       const results = [];
       for (const u of uses) {
-        const r = await mcp.callTool({ name: u.name, arguments: u.input });
+        let r;
+        try {
+          r = await mcp.callTool({ name: u.name, arguments: u.input }, CallToolResultSchema, { timeout: TOOL_TIMEOUT_MS });
+        } catch (e) {
+          // A slow or failed call should not sink the question: report it to Claude like an API error.
+          r = { isError: true, content: [{ type: "text", text: `The tool call failed: ${e.message}. Try a narrower request (shorter time window, fewer objects).` }] };
+        }
         const text = (r.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n");
         calls.push({ tool: u.name, operationId: u.input?.operationId, query: u.input?.query, error: !!r.isError });
         results.push({ type: "tool_result", tool_use_id: u.id, content: text || "(empty)", is_error: !!r.isError });
