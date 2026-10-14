@@ -9,6 +9,8 @@
 //   --only 3,7,12    run only these question numbers
 //   --model ID       Claude model (default claude-opus-5-5)
 //   --effort LEVEL   low | medium | high (default medium)
+//   --hint MODE      off | on | ab: show the learned decision hint never, always, or in a random half of
+//                    questions (default off); the prediction is logged either way
 //
 // Safety and bookkeeping:
 // - Each question gets its own vsp360 server process, started with the decision log
@@ -32,7 +34,7 @@ const MAX_TURNS = 15;
 
 // ---- arguments ----
 const argv = process.argv.slice(2);
-const VALUED = new Set(["--limit", "--only", "--model", "--effort"]);
+const VALUED = new Set(["--limit", "--only", "--model", "--effort", "--hint"]);
 const file = argv.find((a, i) => !a.startsWith("--") && !VALUED.has(argv[i - 1]));
 const opt = (name) => { const i = argv.indexOf(`--${name}`); return i >= 0 ? argv[i + 1] : undefined; };
 const dryRun = argv.includes("--dry-run");
@@ -40,6 +42,8 @@ const limit = Number(opt("limit")) || Infinity;
 const only = opt("only")?.split(",").map(Number);
 const model = opt("model") ?? "claude-opus-5-5";
 const effort = opt("effort") ?? "medium";
+const hintMode = { off: "false", on: "true", ab: "ab" }[opt("hint") ?? "off"];
+if (!hintMode) { console.error("--hint must be off, on or ab"); process.exit(1); }
 if (!file) { console.error("usage: node tests/collect-batch.mjs <questions.txt> [--dry-run] [--limit N] [--only 1,2] [--model ID] [--effort LEVEL]"); process.exit(1); }
 
 // ---- questions: "N. text" lines, under optional "## Section" headings ----
@@ -73,7 +77,7 @@ function serverEnv() {
   return {
     PATH: process.env.PATH, HOME: process.env.HOME,
     ...Object.fromEntries(Object.entries(env).filter(([, v]) => v)),
-    VSP360_DECISION_LOG: LOG, VSP360_DECISION_COLLECT: "true",
+    VSP360_DECISION_LOG: LOG, VSP360_DECISION_COLLECT: "true", VSP360_DECISION_HINT: hintMode,
     VSP360_MAX_RESPONSE_CHARS: "20000", // keeps tool results, and so token cost, bounded
   };
 }
