@@ -24,7 +24,7 @@ const allowWrites = process.env.VSP360_ALLOW_WRITES === "true";
 const examplesPath = process.env.VSP360_EXAMPLES ?? join(here, "..", "spec", "examples.json");
 const examples: Record<string, string[]> = examplesPath && existsSync(examplesPath) ? JSON.parse(readFileSync(examplesPath, "utf8")) : {};
 const index = new OperationIndex(spec.operations.values(), examples);
-const decisions = new DecisionLog(process.env.VSP360_DECISION_LOG || undefined);
+const decisions = new DecisionLog(process.env.VSP360_DECISION_LOG || undefined, Number(process.env.VSP360_DECISION_LINK_SECONDS) || 120);
 const toolsets = (process.env.VSP360_TOOLSETS ?? "")
   .split(",")
   .map((s) => s.trim())
@@ -53,6 +53,10 @@ const META_TOOLS: Tool[] = [
         tag: { type: "string", description: "API area, e.g. 'Device Registry', 'Platform Alerts', 'Users'. Case-insensitive." },
         query: { type: "string", description: "What you want to do, in plain words (e.g. 'volumes with no host path', 'replication pairs status'). Ranked by BM25 relevance with a confidence rating." },
         limit: { type: "integer", minimum: 1, maximum: 40, description: "Maximum results for a query (default 10)." },
+        // Offered only while the decision log is on: it is recorded, never used for ranking.
+        ...(decisions.enabled
+          ? { request: { type: "string", description: "The user's request that led to this search, in their own words. Recorded in the local decision log to improve search; does not affect results." } }
+          : {}),
       },
     },
     annotations: { readOnlyHint: true, openWorldHint: false },
@@ -186,7 +190,8 @@ function listOperations(args: Json) {
   const limit = Math.min(Math.max(Number(args.limit) || 10, 1), 40);
   const { hits, confidence, reason, lead, coverage, intent } = index.search(query, { tag: tag || undefined, limit });
   const hint = confidence !== "high" ? analyticsHint(query) : null;
-  decisions.search({ query, tag: tag || undefined, confidence, lead, coverage, intent, analyticsHint: !!hint, hits: hits.map((h) => ({ id: h.op.operationId, score: h.score })) });
+  const request = typeof args.request === "string" && args.request.trim() ? args.request.trim() : undefined;
+  decisions.search({ query, request, tag: tag || undefined, confidence, lead, coverage, intent, analyticsHint: !!hint, hits: hits.map((h) => ({ id: h.op.operationId, score: h.score })) });
   if (!hits.length) return text("No operations matched. Try other words, or call with no arguments to see the API areas.");
   const advice = {
     high: "Use the top result; describe it first if you need its parameters.",

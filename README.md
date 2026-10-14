@@ -35,8 +35,8 @@ Each result set carries a **confidence** of HIGH, MEDIUM or LOW, based on how fa
 
 Set `VSP360_DECISION_LOG` to a file path to record, locally, how search results are used:
 
-- **For each search:** the query, the confidence rating and the signals behind it (lead, coverage, intent, the analytics hint), and the ranked operationIds.
-- **For each describe or call:** the operationId, its rank in the most recent search, the HTTP status and the duration. Calls also record the *names* of the arguments used.
+- **For each search:** the query and, if Claude passes it, the user's own request that led to the search (the `request` argument, offered only while the log is on and never used for ranking); the confidence rating and the signals behind it (lead, coverage, intent, the analytics hint), and the ranked operationIds.
+- **For each describe or call:** the operationId, its rank in the most recent search if it started within `VSP360_DECISION_LINK_SECONDS` of it (otherwise it is logged as unlinked), the seconds since that search, the HTTP status and the duration. Calls also record the *names* of the arguments used.
 
 Argument values, request and response bodies, headers and credentials are never logged. The query text is logged as typed, so treat the file as you would chat history.
 
@@ -123,6 +123,7 @@ To try the tools interactively, run `npm run inspect`. It opens the MCP Inspecto
 | `VSP360_DOWNLOAD_DIR` | `~/Downloads/vsp360-mcp` | Where binary downloads are saved |
 | `VSP360_PATH_REWRITES` | `/api/v1/protection=/dataprotection/api/v1/protection` | Gateway prefixes the spec leaves out, as comma-separated `/from=/to` pairs. The default makes the Data Protection operations reach `/dataprotection/...`. |
 | `VSP360_DECISION_LOG` | *(off)* | Path to a JSON Lines file. When set, each search, describe and call is logged locally (see [Decision log](#decision-log)). |
+| `VSP360_DECISION_LINK_SECONDS` | `120` | A describe or call is tied to the latest search only if it starts within this many seconds of it. |
 | `VSP360_EXAMPLES` | bundled `spec/examples.json` | Example user questions per operation, used to rank search results. Set to an empty string to turn them off. |
 | `VSP360_SPEC` | bundled spec | Path to a different OpenAPI file, e.g. a newer VSP 360 release |
 
