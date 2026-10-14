@@ -99,6 +99,10 @@ export interface SearchResult {
   hits: SearchHit[];
   confidence: Confidence;
   reason: string;
+  /** Raw signals behind the confidence rating, for logging. lead is null when there is one hit or none. */
+  lead: number | null;
+  coverage: number;
+  intent: "read" | "write" | null;
 }
 
 export class OperationIndex {
@@ -160,22 +164,23 @@ export class OperationIndex {
     }
     hits.sort((a, b) => b.score - a.score);
     const limited = hits.slice(0, opts.limit ?? 15);
-    return { hits: limited, ...this.confidence(hits, original) };
+    return { hits: limited, intent, ...this.confidence(hits, original) };
   }
 
   /**
    * Confidence from two signals: how far the top hit leads the runner-up, and
    * how much of the user's own wording (not synonym expansions) it covers.
    */
-  private confidence(hits: SearchHit[], original: Set<string>): { confidence: Confidence; reason: string } {
-    if (!hits.length) return { confidence: "low", reason: "no operation matched any query term" };
+  private confidence(hits: SearchHit[], original: Set<string>): { confidence: Confidence; reason: string; lead: number | null; coverage: number } {
+    if (!hits.length) return { confidence: "low", reason: "no operation matched any query term", lead: null, coverage: 0 };
     const [top, second] = hits;
     const coverage = original.size ? top.matched.filter((t) => original.has(t)).length / original.size : 0;
     const lead = second ? top.score / second.score : Infinity;
     const pct = Math.round(coverage * 100);
     const leadText = lead === Infinity ? "it is the only match" : `it leads the next by ${lead.toFixed(2)}×`;
-    if (lead >= 1.3 && coverage >= 0.6) return { confidence: "high", reason: `${leadText} and covers ${pct}% of the query terms` };
-    if ((lead >= 1.1 && coverage >= 0.5) || coverage >= 0.75) return { confidence: "medium", reason: `${leadText} and covers ${pct}% of the query terms` };
-    return { confidence: "low", reason: `${leadText}, covering ${pct}% of the query terms` };
+    const signals = { lead: lead === Infinity ? null : +lead.toFixed(3), coverage: +coverage.toFixed(3) };
+    if (lead >= 1.3 && coverage >= 0.6) return { confidence: "high", reason: `${leadText} and covers ${pct}% of the query terms`, ...signals };
+    if ((lead >= 1.1 && coverage >= 0.5) || coverage >= 0.75) return { confidence: "medium", reason: `${leadText} and covers ${pct}% of the query terms`, ...signals };
+    return { confidence: "low", reason: `${leadText}, covering ${pct}% of the query terms`, ...signals };
   }
 }

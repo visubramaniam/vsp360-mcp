@@ -13,6 +13,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema, type Tool } from "@model
 import { Spec, type Operation, fileFields, isMultipart, toolParamName } from "./spec.js";
 import { Vsp360Client, loadConfig, type CallArgs } from "./client.js";
 import { OperationIndex, analyticsHint } from "./search.js";
+import { DecisionLog } from "./decisionlog.js";
 
 type Json = any;
 
@@ -23,6 +24,7 @@ const allowWrites = process.env.VSP360_ALLOW_WRITES === "true";
 const examplesPath = process.env.VSP360_EXAMPLES ?? join(here, "..", "spec", "examples.json");
 const examples: Record<string, string[]> = examplesPath && existsSync(examplesPath) ? JSON.parse(readFileSync(examplesPath, "utf8")) : {};
 const index = new OperationIndex(spec.operations.values(), examples);
+const decisions = new DecisionLog(process.env.VSP360_DECISION_LOG || undefined);
 const toolsets = (process.env.VSP360_TOOLSETS ?? "")
   .split(",")
   .map((s) => s.trim())
@@ -182,7 +184,9 @@ function listOperations(args: Json) {
     return text(`${ops.length} operation(s) in ${ops[0].tag}:\n${ops.map((op) => "- " + fmt(op)).join("\n")}`);
   }
   const limit = Math.min(Math.max(Number(args.limit) || 10, 1), 40);
-  const { hits, confidence, reason } = index.search(query, { tag: tag || undefined, limit });
+  const { hits, confidence, reason, lead, coverage, intent } = index.search(query, { tag: tag || undefined, limit });
+  const hint = confidence !== "high" ? analyticsHint(query) : null;
+  decisions.search({ query, tag: tag || undefined, confidence, lead, coverage, intent, analyticsHint: !!hint, hits: hits.map((h) => ({ id: h.op.operationId, score: h.score })) });
   if (!hits.length) return text("No operations matched. Try other words, or call with no arguments to see the API areas.");
   const advice = {
     high: "Use the top result; describe it first if you need its parameters.",
@@ -190,13 +194,13 @@ function listOperations(args: Json) {
     low: "Results are ambiguous. Describe the top 2–3 candidates and pick by their descriptions, or refine the query with more specific words.",
   }[confidence];
   const lines = hits.map((h, i) => `${i + 1}. ${fmt(h.op)}  (score ${h.score.toFixed(2)}; matched: ${h.matched.join(", ")})`);
-  const hint = confidence !== "high" ? analyticsHint(query) : null;
   return text(`Confidence: ${confidence.toUpperCase()}: ${reason}.\n${advice}${hint ? "\n" + hint : ""}\n\n${lines.join("\n")}`);
 }
 
 function describeOperation(args: Json) {
   const op = spec.operations.get(args.operationId);
   if (!op) return text(`Unknown operationId "${args.operationId}". Use vsp360_list_operations to find it.`, true);
+  decisions.describe(op.operationId);
   const out: Json = {
     operationId: op.operationId,
     method: op.method,
@@ -215,16 +219,25 @@ function describeOperation(args: Json) {
   return text(JSON.stringify(out, null, 2));
 }
 
-async function runOperation(op: Operation, args: CallArgs) {
+async function runOperation(op: Operation, args: CallArgs, via: "meta" | "direct") {
+  const argNames = [...Object.keys(args.params ?? {}), ...(args.body !== undefined ? ["body"] : []), ...(args.files ? ["files"] : [])];
+  const logged = decisions.call({ operationId: op.operationId, via, argNames });
   if (!op.readOnly && !allowWrites) {
+    logged({ status: 0, ok: false, blocked: true });
     return text(
       `${op.operationId} (${op.method} ${op.path}) changes VSP 360 state and the server is running read-only. ` +
         `Set VSP360_ALLOW_WRITES=true in the MCP server configuration to enable write operations.`,
       true,
     );
   }
-  const result = await getClient().call(op, args);
-  return text(result.text, !result.ok);
+  try {
+    const result = await getClient().call(op, args);
+    logged({ status: result.status, ok: result.ok });
+    return text(result.text, !result.ok);
+  } catch (e) {
+    logged({ status: 0, ok: false });
+    throw e;
+  }
 }
 
 const server = new Server({ name: "vsp360-mcp", version: "0.1.4" }, { capabilities: { tools: {} } });
@@ -242,12 +255,12 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
     if (name === "vsp360_call_operation") {
       const op = spec.operations.get(args.operationId);
       if (!op) return text(`Unknown operationId "${args.operationId}". Use vsp360_list_operations to find it.`, true);
-      return await runOperation(op, args);
+      return await runOperation(op, args, "meta");
     }
     const op = directOps.get(name);
     if (!op) return text(`Unknown tool ${name}`, true);
     const { body, files, all_pages, max_pages, save_to, ...params } = args;
-    return await runOperation(op, { params, body, files, all_pages, max_pages, save_to });
+    return await runOperation(op, { params, body, files, all_pages, max_pages, save_to }, "direct");
   } catch (e) {
     const err = e as Error & { cause?: Error };
     const cause = err.cause ? ` (${err.cause.message})` : "";
@@ -257,5 +270,6 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
 
 await server.connect(new StdioServerTransport());
 console.error(
-  `[vsp360-mcp] ready: ${spec.operations.size} operations, ${directOps.size} direct tools, ${allowWrites ? "read/write" : "read-only"}`,
+  `[vsp360-mcp] ready: ${spec.operations.size} operations, ${directOps.size} direct tools, ${allowWrites ? "read/write" : "read-only"}` +
+    (decisions.enabled ? `, decision log on` : ""),
 );

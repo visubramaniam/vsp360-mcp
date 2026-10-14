@@ -15,7 +15,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "inspect": "npx @modelcontextprotocol/inspector node dist/index.js",
-    "eval": "npm run build && node tests/search-eval.mjs"
+    "eval": "npm run build && node tests/search-eval.mjs",
+    "decision-report": "node tests/decision-report.mjs"
   },
   "engines": {
     "node": ">=20"

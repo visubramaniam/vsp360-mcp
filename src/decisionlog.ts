@@ -1,0 +1,65 @@
+// Opt-in local log of search → describe → call decisions, for training and
+// evaluating a model of what to do with a search result. Enabled by setting
+// VSP360_DECISION_LOG to a file path; one JSON object per line.
+//
+// What is logged: the query text, search features and ranked operationIds,
+// which operation was then described or called, its rank in the last search,
+// and the call's HTTP status. What is never logged: argument values, request
+// or response bodies, headers, tokens, or credentials. Argument *names* are
+// logged so a model can tell a list call from a by-id call.
+import { appendFileSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { randomUUID } from "node:crypto";
+
+type Event = Record<string, unknown>;
+
+export class DecisionLog {
+  private readonly session = randomUUID();
+  private seq = 0;
+  private lastSearch: { seq: number; ids: string[] } | undefined;
+
+  constructor(private readonly path: string | undefined) {
+    if (path) mkdirSync(dirname(path), { recursive: true });
+  }
+
+  get enabled(): boolean {
+    return !!this.path;
+  }
+
+  search(e: { query: string; tag?: string; confidence: string; lead: number | null; coverage: number; intent: string | null; analyticsHint: boolean; hits: { id: string; score: number }[] }): void {
+    if (!this.path) return;
+    const seq = this.write({ event: "search", ...e, hits: e.hits.map((h) => ({ id: h.id, score: +h.score.toFixed(3) })) });
+    this.lastSearch = { seq, ids: e.hits.map((h) => h.id) };
+  }
+
+  describe(operationId: string): void {
+    this.write({ event: "describe", operationId, ...this.link(operationId) });
+  }
+
+  /** Capture when a call starts, so a slow call is tied to the search that led to it, not a later one. */
+  call(e: { operationId: string; via: "meta" | "direct"; argNames: string[] }): (outcome: { status: number; ok: boolean; blocked?: boolean }) => void {
+    const link = this.link(e.operationId);
+    const started = Date.now();
+    return (outcome) => void this.write({ event: "call", ...e, ...outcome, ms: Date.now() - started, ...link });
+  }
+
+  /** Ties an action to the most recent search: its seq and the operation's 1-based rank (null if absent). */
+  private link(operationId: string): Event {
+    if (!this.path) return {};
+    if (!this.lastSearch) return { searchSeq: null, rank: null };
+    const i = this.lastSearch.ids.indexOf(operationId);
+    return { searchSeq: this.lastSearch.seq, rank: i < 0 ? null : i + 1 };
+  }
+
+  private write(e: Event): number {
+    const seq = ++this.seq;
+    if (!this.path) return seq;
+    try {
+      appendFileSync(this.path, JSON.stringify({ ts: new Date().toISOString(), session: this.session, seq, ...e }) + "\n");
+    } catch (err) {
+      // Logging must never break a tool call.
+      console.error(`[vsp360-mcp] decision log write failed: ${(err as Error).message}`);
+    }
+    return seq;
+  }
+}

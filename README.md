@@ -31,6 +31,17 @@ A `query` is ranked with **BM25** over each operation's ID, summary, tag, path, 
 
 Each result set carries a **confidence** of HIGH, MEDIUM or LOW, based on how far the top hit leads the next and how much of the request's own wording it matches. The rating comes with advice: call the top result, check its description, or describe the top two or three. When a LOW or MEDIUM result looks like a performance or topology question, the response points to `analyticsRunQuery`. `npm run eval` scores the search against 83 labelled requests, 45 of them held out from tuning; `EXAMPLES=0 npm run eval` measures it without the example questions.
 
+### Decision log
+
+Set `VSP360_DECISION_LOG` to a file path to record, locally, how search results are used:
+
+- **For each search:** the query, the confidence rating and the signals behind it (lead, coverage, intent, the analytics hint), and the ranked operationIds.
+- **For each describe or call:** the operationId, its rank in the most recent search, the HTTP status and the duration. Calls also record the *names* of the arguments used.
+
+Argument values, request and response bodies, headers and credentials are never logged. The query text is logged as typed, so treat the file as you would chat history.
+
+`npm run decision-report -- <log.jsonl> [--csv out.csv]` turns the log into one row per search, labelled with what happened next (top result called, another result called, an operation not in the results called, or nothing called). Those rows are the training and test data for replacing the fixed confidence thresholds with a learned decision model.
+
 ## Safety: read-only by default
 
 By default only `GET` operations are allowed, plus a few `POST` operations that only query or validate:
@@ -111,6 +122,7 @@ To try the tools interactively, run `npm run inspect`. It opens the MCP Inspecto
 | `VSP360_MAX_RESPONSE_CHARS` | `60000` | Truncation limit for text responses |
 | `VSP360_DOWNLOAD_DIR` | `~/Downloads/vsp360-mcp` | Where binary downloads are saved |
 | `VSP360_PATH_REWRITES` | `/api/v1/protection=/dataprotection/api/v1/protection` | Gateway prefixes the spec leaves out, as comma-separated `/from=/to` pairs. The default makes the Data Protection operations reach `/dataprotection/...`. |
+| `VSP360_DECISION_LOG` | *(off)* | Path to a JSON Lines file. When set, each search, describe and call is logged locally (see [Decision log](#decision-log)). |
 | `VSP360_EXAMPLES` | bundled `spec/examples.json` | Example user questions per operation, used to rank search results. Set to an empty string to turn them off. |
 | `VSP360_SPEC` | bundled spec | Path to a different OpenAPI file, e.g. a newer VSP 360 release |
 
