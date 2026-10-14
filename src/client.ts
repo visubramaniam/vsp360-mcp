@@ -8,7 +8,7 @@ import { type Operation, isMultipart, fileFields, toolParamName } from "./spec.j
 
 type Json = any;
 
-export interface Config {
+interface Config {
   baseUrl: string;
   clientId: string;
   clientSecret: string;
@@ -63,7 +63,7 @@ export interface CallArgs {
   save_to?: string;
 }
 
-export interface CallResult {
+interface CallResult {
   ok: boolean;
   status: number;
   text: string;

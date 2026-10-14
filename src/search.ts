@@ -46,7 +46,7 @@ function intentOf(query: string): "read" | "write" | null {
   return null;
 }
 
-export function tokenize(text: string): string[] {
+function tokenize(text: string): string[] {
   return text
     .replace(/\b([A-Z]{2,})s\b/g, (_, a: string) => `${a.toLowerCase()}s`) // WWNs → wwns, not "WW Ns"
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2") // camelCase → camel Case
@@ -89,7 +89,7 @@ export function analyticsHint(query: string): string | null {
     : null;
 }
 
-export interface SearchHit {
+interface SearchHit {
   op: Operation;
   score: number;
   matched: string[];

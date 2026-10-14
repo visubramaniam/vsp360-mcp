@@ -5,7 +5,7 @@ import { parse } from "yaml";
 
 type Json = any;
 
-export interface Param {
+interface Param {
   name: string;
   in: "path" | "query" | "header";
   required: boolean;
@@ -180,7 +180,7 @@ export class Spec {
   }
 }
 
-export function firstSentence(text = ""): string {
+function firstSentence(text = ""): string {
   const s = text.replace(/\s+/g, " ").trim();
   const m = s.match(/^(.{20,}?[.!?])(\s|$)/);
   return (m ? m[1] : s).slice(0, 240);
