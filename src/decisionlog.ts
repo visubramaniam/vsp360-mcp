@@ -18,6 +18,8 @@ export class DecisionLog {
   private readonly session = randomUUID();
   private seq = 0;
   private lastSearch: { seq: number; ids: string[]; at: number } | undefined;
+  /** Searches kept for collection mode's "was this operation searched for?" check. */
+  private recent: { ids: Set<string>; at: number }[] = [];
 
   /**
    * @param linkSeconds a describe or call is tied to the latest search only if it starts within this many
@@ -35,6 +37,19 @@ export class DecisionLog {
     if (!this.path) return;
     const seq = this.write({ event: "search", ...e, hits: e.hits.map((h) => ({ id: h.id, score: +h.score.toFixed(3) })) });
     this.lastSearch = { seq, ids: e.hits.map((h) => h.id), at: Date.now() };
+    this.recent.push({ ids: new Set(this.lastSearch.ids), at: this.lastSearch.at });
+  }
+
+  /** Collection mode: true if the operation appeared in a search result within the last windowSeconds. */
+  searchedFor(operationId: string, windowSeconds: number): boolean {
+    const cutoff = Date.now() - windowSeconds * 1000;
+    this.recent = this.recent.filter((r) => r.at >= cutoff);
+    return this.recent.some((r) => r.ids.has(operationId));
+  }
+
+  /** Collection mode turned a request away; logged so refusals can be counted. */
+  refused(e: { tool: string; operationId?: string; reason: "no_request" | "not_searched" }): void {
+    this.write({ event: "refused", ...e });
   }
 
   describe(operationId: string): void {

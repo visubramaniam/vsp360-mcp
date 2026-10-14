@@ -25,6 +25,12 @@ const examplesPath = process.env.VSP360_EXAMPLES ?? join(here, "..", "spec", "ex
 const examples: Record<string, string[]> = examplesPath && existsSync(examplesPath) ? JSON.parse(readFileSync(examplesPath, "utf8")) : {};
 const index = new OperationIndex(spec.operations.values(), examples);
 const decisions = new DecisionLog(process.env.VSP360_DECISION_LOG || undefined, Number(process.env.VSP360_DECISION_LINK_SECONDS) || 120);
+// Collection mode: every search must carry the user's request, and every call must be to an operation that
+// came up in a search within the window, so each question yields a labelled search. Needs the decision log.
+const collect = decisions.enabled && process.env.VSP360_DECISION_COLLECT === "true";
+const collectSeconds = Number(process.env.VSP360_DECISION_COLLECT_SECONDS) || 600;
+if (process.env.VSP360_DECISION_COLLECT === "true" && !decisions.enabled)
+  console.error("[vsp360-mcp] VSP360_DECISION_COLLECT ignored: set VSP360_DECISION_LOG to turn the decision log on");
 const toolsets = (process.env.VSP360_TOOLSETS ?? "")
   .split(",")
   .map((s) => s.trim())
@@ -46,7 +52,11 @@ const META_TOOLS: Tool[] = [
       "Browse the VSP 360 REST API. With no arguments, lists the API areas (tags) and how many operations each has. " +
       "With `tag` and/or `query`, lists matching operations (operationId, method, path, summary). " +
       "Use this first to find the operationId you need, then vsp360_describe_operation and vsp360_call_operation." +
-      (allowWrites ? "" : " Operations marked [write] are blocked because the server runs read-only."),
+      (allowWrites ? "" : " Operations marked [write] are blocked because the server runs read-only.") +
+      (collect
+        ? " DATA COLLECTION MODE: search with `query` and `request` for every user question, even if you already know the operation; " +
+          "vsp360_call_operation only accepts operations that appeared in a search in the last few minutes."
+        : ""),
     inputSchema: {
       type: "object",
       properties: {
@@ -55,7 +65,7 @@ const META_TOOLS: Tool[] = [
         limit: { type: "integer", minimum: 1, maximum: 40, description: "Maximum results for a query (default 10)." },
         // Offered only while the decision log is on: it is recorded, never used for ranking.
         ...(decisions.enabled
-          ? { request: { type: "string", description: "The user's request that led to this search, in their own words. Recorded in the local decision log to improve search; does not affect results." } }
+          ? { request: { type: "string", description: "The user's request that led to this search, in their own words. Recorded in the local decision log to improve search; does not affect results." + (collect ? " Required with `query`." : "") } }
           : {}),
       },
     },
@@ -191,6 +201,10 @@ function listOperations(args: Json) {
   const { hits, confidence, reason, lead, coverage, intent } = index.search(query, { tag: tag || undefined, limit });
   const hint = confidence !== "high" ? analyticsHint(query) : null;
   const request = typeof args.request === "string" && args.request.trim() ? args.request.trim() : undefined;
+  if (collect && !request) {
+    decisions.refused({ tool: "vsp360_list_operations", reason: "no_request" });
+    return text("Data collection mode: pass `request` with the user's question in their own words, then search again.", true);
+  }
   decisions.search({ query, request, tag: tag || undefined, confidence, lead, coverage, intent, analyticsHint: !!hint, hits: hits.map((h) => ({ id: h.op.operationId, score: h.score })) });
   if (!hits.length) return text("No operations matched. Try other words, or call with no arguments to see the API areas.");
   const advice = {
@@ -225,6 +239,14 @@ function describeOperation(args: Json) {
 }
 
 async function runOperation(op: Operation, args: CallArgs, via: "meta" | "direct") {
+  if (collect && !decisions.searchedFor(op.operationId, collectSeconds)) {
+    decisions.refused({ tool: via === "meta" ? "vsp360_call_operation" : toolName(op), operationId: op.operationId, reason: "not_searched" });
+    return text(
+      `Data collection mode: ${op.operationId} has not appeared in a search in the last ${Math.round(collectSeconds / 60)} minutes. ` +
+        "Call vsp360_list_operations with `query` and `request` (the user's question) first; call this operation if it is in the results.",
+      true,
+    );
+  }
   const argNames = [...Object.keys(args.params ?? {}), ...(args.body !== undefined ? ["body"] : []), ...(args.files ? ["files"] : [])];
   const logged = decisions.call({ operationId: op.operationId, via, argNames });
   if (!op.readOnly && !allowWrites) {
@@ -276,5 +298,6 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
 await server.connect(new StdioServerTransport());
 console.error(
   `[vsp360-mcp] ready: ${spec.operations.size} operations, ${directOps.size} direct tools, ${allowWrites ? "read/write" : "read-only"}` +
-    (decisions.enabled ? `, decision log on` : ""),
+    (decisions.enabled ? `, decision log on` : "") +
+    (collect ? `, collection mode on (${collectSeconds}s window)` : ""),
 );

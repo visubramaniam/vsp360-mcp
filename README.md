@@ -40,7 +40,9 @@ Set `VSP360_DECISION_LOG` to a file path to record, locally, how search results 
 
 Argument values, request and response bodies, headers and credentials are never logged. The query text is logged as typed, so treat the file as you would chat history.
 
-`npm run decision-report -- <log.jsonl> [--csv out.csv]` turns the log into one row per search, labelled with what happened next (top result called, another result called, an operation not in the results called, or nothing called). Those rows are the training and test data for replacing the fixed confidence thresholds with a learned decision model.
+**Collection mode.** With `VSP360_DECISION_COLLECT=true` (and the log on), the server makes every question produce a labelled search: a search with `query` must also carry `request`, and `vsp360_call_operation` (or a direct tool) is refused unless the operation appeared in a search result within the last `VSP360_DECISION_COLLECT_SECONDS` (default 600). Refusals are logged. Claude is slower in this mode, so turn it on for a data-collection period and off afterwards; turning writes off (`VSP360_ALLOW_WRITES` unset) for the period is also a good idea.
+
+`npm run decision-report -- <log.jsonl> [--csv out.csv]` turns the log into one row per search, labelled with what happened next (top result called, another result called, an operation not in the results called, or nothing called). Searches whose `request` matches a test-split question in `tests/user-questions.tsv` are flagged so they can be kept out of training. Those rows are the training and test data for replacing the fixed confidence thresholds with a learned decision model.
 
 ## Safety: read-only by default
 
@@ -123,6 +125,8 @@ To try the tools interactively, run `npm run inspect`. It opens the MCP Inspecto
 | `VSP360_DOWNLOAD_DIR` | `~/Downloads/vsp360-mcp` | Where binary downloads are saved |
 | `VSP360_PATH_REWRITES` | `/api/v1/protection=/dataprotection/api/v1/protection` | Gateway prefixes the spec leaves out, as comma-separated `/from=/to` pairs. The default makes the Data Protection operations reach `/dataprotection/...`. |
 | `VSP360_DECISION_LOG` | *(off)* | Path to a JSON Lines file. When set, each search, describe and call is logged locally (see [Decision log](#decision-log)). |
+| `VSP360_DECISION_COLLECT` | `false` | `true` turns on collection mode (needs `VSP360_DECISION_LOG`); see [Decision log](#decision-log). |
+| `VSP360_DECISION_COLLECT_SECONDS` | `600` | In collection mode, how long a search result keeps its operations callable. |
 | `VSP360_DECISION_LINK_SECONDS` | `120` | A describe or call is tied to the latest search only if it starts within this many seconds of it. |
 | `VSP360_EXAMPLES` | bundled `spec/examples.json` | Example user questions per operation, used to rank search results. Set to an empty string to turn them off. |
 | `VSP360_SPEC` | bundled spec | Path to a different OpenAPI file, e.g. a newer VSP 360 release |
