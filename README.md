@@ -45,6 +45,10 @@ Each result set carries a **confidence** of HIGH, MEDIUM or LOW, based on how fa
 
 With `VSP360_DECISION_HINT=true`, a line under the results suggests what to do with them: call the top operation, compare the top few, answer with Analytics, or search again. It comes from a small model in `spec/decision-model.json`, trained on logged searches (see [Improving search](#improving-search-logging-and-the-learned-hint)). It never changes the ranking. With `ab`, it is shown in a random half of server sessions so the two can be compared.
 
+#### Analytics (MQL) field reference
+
+The spec documents the Analytics query endpoint but not what it can query. Describing `analyticsRunQuery` therefore adds an `mqlReference`: MQL usage notes, the attributes and relations of the most-used resource types (`raidStorage`, `raidPool`, `raidLdev`, `raidPort`, `raidHG`, `raidLU`, `raidPortWWN`, `raidPair`, the host, fabric and VMware types), and the names of the other 38 types. Describing it with `resourceType` (for example `raidPool`) returns one type's full attribute list. The block, file and object types come from the *VSP 360 Metrics Reference Guide*; the host, fabric and VMware types were found on a live system and may be incomplete. The reference lives in `spec/analytics-fields.json` (`VSP360_ANALYTICS_FIELDS` points to another file).
+
 #### Measuring search
 
 `npm run eval` scores the search against 83 labelled development requests (45 held out from tuning) and 119 real user questions in `tests/user-questions.tsv` (79 held out); `EXAMPLES=0 npm run eval` measures it without the example questions.
@@ -163,6 +167,7 @@ To try the tools interactively, run `npm run inspect`. It opens the MCP Inspecto
 | `VSP360_DECISION_COLLECT_SECONDS` | `600` | In collection mode, how long a search result keeps its operations callable. |
 | `VSP360_DECISION_HINT` | `false` | `true` adds the learned model's suggested next step to search results; `ab` does so in a random half of sessions. |
 | `VSP360_DECISION_LINK_SECONDS` | `120` | A describe or call is tied to the latest search only if it starts within this many seconds of it. |
+| `VSP360_ANALYTICS_FIELDS` | bundled `spec/analytics-fields.json` | MQL resource types and attributes added to `analyticsRunQuery`'s description. |
 | `VSP360_EXAMPLES` | bundled `spec/examples.json` | Example user questions per operation, used to rank search results. Set to an empty string to turn them off. |
 | `VSP360_SPEC` | bundled spec | Path to a different OpenAPI file, e.g. a newer VSP 360 release |
 

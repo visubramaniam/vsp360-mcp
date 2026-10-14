@@ -1,0 +1,1273 @@
+{
+ "_comment": "MQL resource types for analyticsRunQuery: attribute IDs and relations. 'guide' types come from the VSP 360 1.3 Metrics Reference Guide (MK-25VSP360002-02); 'observed' types were found by querying a live VSP 360 1.4 and may be incomplete. Use =attr for configuration values and @attr rx b .* for time series.",
+ "types": {
+  "raidStorageModel": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name"
+   ],
+   "metrics": [],
+   "relations": []
+  },
+  "raidConsumer": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "allocatedCapacityInGB",
+    "usedCapacityInGB",
+    "freeCapacityInGB",
+    "usedCapacityInPercent",
+    "numberOfLdevs"
+   ],
+   "metrics": [
+    "readTransRate",
+    "writeTransRate",
+    "transferRate",
+    "totalIOPS",
+    "readIOPS",
+    "writeIOPS",
+    "responseTime",
+    "readResponseTime",
+    "writeResponseTime",
+    "randomIOPSPercent"
+   ],
+   "relations": [
+    "raidHG",
+    "raidStorage",
+    "raidPort",
+    "raidLdev",
+    "raidMPB"
+   ]
+  },
+  "raidStorage": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "modelName",
+    "vendorName",
+    "cacheSizeMB",
+    "serialNumber",
+    "openReservedCapacityGB",
+    "capacityInGB",
+    "freeCapacityInGB",
+    "allocatedCapacityInGB",
+    "totalFreeSpaceInGB",
+    "unAllocatedCapacityInGB",
+    "otherCapacityGB",
+    "dkcModel",
+    "totalEfficiencyRatio",
+    "softwareSavingRatio",
+    "softwareCompressionRatio",
+    "softwareDeduplicationRatio",
+    "softwarePatternMatchingRatio",
+    "fmdSavingRatio",
+    "fmdCompressionRatio",
+    "fmdPatternMatchingRatio",
+    "provisioningEfficiency",
+    "snapshotEfficiencyRatio",
+    "calculationStartTime",
+    "calculationEndTime",
+    "microcodeVersion",
+    "location",
+    "siteID",
+    "dataReductionRatio",
+    "preCapacity",
+    "postCapacity",
+    "preCapacity_R",
+    "postCapacity_R",
+    "nonReducibleCapacity",
+    "savedCapacity",
+    "powerConsumption"
+   ],
+   "metrics": [
+    "transferRate",
+    "totalIOPS"
+   ],
+   "relations": [
+    "raidStorageModel",
+    "raidVSM"
+   ],
+   "synthetic": [
+    "syn_raidLdev_allocatedTotalIOPS",
+    "syn_raidLdev_allocatedReadIOPS",
+    "syn_raidLdev_allocatedWriteIOPS",
+    "syn_raidLdev_allocatedReadIOPSPercent",
+    "syn_raidLdev_allocatedTransferRate",
+    "syn_raidLdev_allocatedWriteTransRate",
+    "syn_raidLdev_allocatedResponseTime",
+    "syn_raidLdev_allocatedSeqBlockSize",
+    "syn_raidLdev_allocatedRandomBlockSize",
+    "syn_raidLdev_allocatedWriteHit",
+    "syn_raidLdev_readIOPS",
+    "syn_raidLdev_writeIOPS",
+    "syn_raidLdev_transferRate",
+    "syn_raidLdev_readTransRate",
+    "syn_raidLdev_readResponseTime",
+    "syn_raidLdev_writeResponseTime",
+    "syn_raidLdev_allocatedRandomIOPSPercent",
+    "syn_raidLdev_allocatedReadHit",
+    "syn_raidClpr_utilization",
+    "syn_raidClpr_writePendingRate",
+    "syn_raidMP_utilization",
+    "syn_raidLdev_allocatedReadTransRate",
+    "syn_raidLdev_allocatedReadResponseTime",
+    "syn_raidLdev_allocatedWriteResponseTime",
+    "syn_raidMPB_utilization",
+    "syn_raidLdev_allocatedWriteIOPSPercent",
+    "syn_raidLdev_allocatedSeqIOPSPercent"
+   ]
+  },
+  "raidHG": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "hgID",
+    "hgName",
+    "hostMode"
+   ],
+   "metrics": [],
+   "relations": [
+    "raidStorage",
+    "raidPort"
+   ]
+  },
+  "raidPort": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "portType",
+    "attribute",
+    "speedInGB",
+    "loopId",
+    "topology",
+    "lunSecurity",
+    "wwn",
+    "portMode",
+    "negotiatedPortSpeed",
+    "iscsiName"
+   ],
+   "metrics": [
+    "totalIOPS",
+    "transferRate",
+    "responseTime",
+    "utilization"
+   ],
+   "relations": [
+    "raidStorage",
+    "sp"
+   ]
+  },
+  "raidPortWWN": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name"
+   ],
+   "metrics": [],
+   "relations": [
+    "raidStorage",
+    "raidPort",
+    "raidHG"
+   ]
+  },
+  "raidPool": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "poolID",
+    "poolStatus",
+    "usageRate",
+    "noOfVVols",
+    "numberOfPoolVolumes",
+    "thresholdRate",
+    "poolType",
+    "provisioningRatio",
+    "subscribedCapacity",
+    "numberOfTiers",
+    "totalCapacityInGB",
+    "availableCapacityInGB",
+    "usedCapacityInGB",
+    "usedCapacityInPercent",
+    "freeCapacityInPercent",
+    "poolCapacityExpansionRate",
+    "fmcPoolCapacitySaving",
+    "fmcPoolCapacitySavingRate",
+    "dataSaving",
+    "emulationType",
+    "userDataCapacity",
+    "poolSavingRatio",
+    "savingCapacity",
+    "dkcSavingCapacityInGB",
+    "dkcSavingRatio",
+    "dkcCompressionRatio",
+    "dkcDedupRatio",
+    "dkcCompressionCapacity",
+    "dkcDedupCapacity",
+    "dkcReclaimCapacity",
+    "dkcSystemCapacity",
+    "dkcPreProcCapacity",
+    "fmcCompressionRatio",
+    "fmcCompressionCapacity",
+    "fmcReclaimCapacity",
+    "fmcPhysicalCapacity",
+    "fmcUsedPhysicalCapacity",
+    "fmcLogicalCapacity",
+    "fmcUsedLogicalCapacity",
+    "warningThresholdRate",
+    "autoExpansion",
+    "poolName",
+    "totalEfficiencyRatio",
+    "softwareSavingRatio",
+    "softwareCompressionRatio",
+    "softwareDeduplicationRatio",
+    "softwarePatternMatchingRatio",
+    "fmdSavingRatio",
+    "fmdCompressionRatio",
+    "fmdPatternMatchingRatio",
+    "provisioningEfficiency",
+    "snapshotEfficiencyRatio",
+    "calculationStartTime",
+    "calculationEndTime",
+    "preUsedCapacity",
+    "compressedCapacity",
+    "dedupedCapacity",
+    "reclaimedCapacity",
+    "dataReductionRatio",
+    "preCapacity",
+    "postCapacity",
+    "preCapacity_R",
+    "postCapacity_R",
+    "nonReducibleCapacity"
+   ],
+   "metrics": [
+    "totalPoolCapacityMB",
+    "touchedCapacityInGB",
+    "unTouchedCapacityInGB",
+    "subRate",
+    "managedCapacityInGB",
+    "physicalcapacityInGB",
+    "percentUsageRate",
+    "percentUsedCapacity",
+    "readTransRate",
+    "writeTransRate",
+    "transferRate",
+    "readIOPS",
+    "writeIOPS",
+    "totalIOPS",
+    "percentReadIOPS",
+    "readResponseTime",
+    "writeResponseTime",
+    "responseTime",
+    "dkcSavingCapacity",
+    "physicalCapacityUsed",
+    "physicalCapacityFree",
+    "physicalCapacityUsageRate",
+    "poolCapacityGB",
+    "totalResponseTimeWtAvg"
+   ],
+   "relations": [
+    "raidStorage",
+    "raidClpr"
+   ],
+   "synthetic": [
+    "syn_raidLdev_ldevCapacityGB",
+    "syn_raidLdev_usedCapacityGB"
+   ]
+  },
+  "raidPG": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "raidLevel",
+    "raidType",
+    "driveType",
+    "pgType",
+    "driveModel",
+    "checkCapacityGB",
+    "numberOfLdevs",
+    "totalCapacityInGB",
+    "physicalCapacity",
+    "totalFreeSpaceInGB",
+    "freeCapacityInGB",
+    "driveStatus",
+    "usedSpareDriveCount",
+    "usedEndurance",
+    "isConcatenated",
+    "displayDriveType",
+    "freePhysicalCapacity"
+   ],
+   "metrics": [
+    "utilization",
+    "transferRate",
+    "readIOPS",
+    "writeIOPS",
+    "readResponseTime",
+    "writeResponseTime",
+    "totalIOPS"
+   ],
+   "relations": [
+    "raidStorage",
+    "raidPG"
+   ]
+  },
+  "raidClpr": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "clprName",
+    "cacheSizeMB"
+   ],
+   "metrics": [
+    "utilization",
+    "writePendingRate",
+    "sideFileUsageRate",
+    "cacheSizeGB",
+    "syn_raidLdev_readHit",
+    "syn_raidLdev_writeHit"
+   ],
+   "relations": [
+    "raidStorage"
+   ]
+  },
+  "raidMP": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "processorId"
+   ],
+   "metrics": [],
+   "relations": [
+    "raidStorage",
+    "raidMPB"
+   ]
+  },
+  "raidMpbClpr": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name"
+   ],
+   "metrics": [
+    "writePendingRate"
+   ],
+   "relations": [
+    "raidStorage",
+    "raidMPB",
+    "raidClpr"
+   ]
+  },
+  "raidMPB": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "mpbId"
+   ],
+   "metrics": [
+    "utilization"
+   ],
+   "relations": [
+    "raidStorage"
+   ]
+  },
+  "raidLU": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "portName",
+    "hgID",
+    "lunId",
+    "ldev",
+    "hgName"
+   ],
+   "metrics": [],
+   "relations": [
+    "raidStorage",
+    "raidPort",
+    "raidHG",
+    "raidLdev"
+   ]
+  },
+  "raidLdev": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "parityGroup",
+    "volumeType",
+    "ldevCapacityGB",
+    "parentPoolId",
+    "associatedPoolId",
+    "volumeAttribute",
+    "ldevNaming",
+    "raidLevel",
+    "raidType",
+    "driveModel",
+    "usedCapacityGB",
+    "mpb",
+    "isExternal",
+    "ldevProperties",
+    "virtualSerialNumber",
+    "virtualDkcName",
+    "virtualLdevNumber",
+    "dedupMode",
+    "ldevProperty",
+    "dedupStore",
+    "upperIOPS",
+    "upperTransferRate",
+    "lowerIOPS",
+    "lowerTransferRate",
+    "responsePriority",
+    "targetResponseTime",
+    "virtualVolumeTotalCapacity",
+    "totalSoftwareSavingRatio",
+    "isTotalSoftwareSavingBlockAvailable",
+    "softwareSavingTotalCapacity",
+    "softwareSavingCompressionCapacity",
+    "softwareSavingDeduplicationCapacity",
+    "softwareSavingReclaimCapacity",
+    "softwareSavingSystemCapacity",
+    "softwareSavingUsedPoolVolumeCapacity",
+    "softwareSavingStatus",
+    "compressedAndDeduped",
+    "isCompressionAccelerationEnabled",
+    "nvmSubsystemID",
+    "nvmNamespaceID",
+    "usageRate"
+   ],
+   "metrics": [
+    "totalIOPS",
+    "readHit",
+    "readIOPS",
+    "randomReadIOPS",
+    "randomWriteIOPS",
+    "seqReadIOPS",
+    "seqWriteIOPS",
+    "writeIOPS",
+    "readTransRate",
+    "transferRate",
+    "writeTransRate",
+    "randomReadTransRate",
+    "randomWriteTransRate",
+    "seqReadTransRate",
+    "seqWriteTransRate",
+    "readResponseTime",
+    "responseTime",
+    "writeResponseTime",
+    "utilization",
+    "randomIOPS",
+    "seqIOPS",
+    "touchedCapacityInGB",
+    "vvolCapacityInGB",
+    "ldevMpbUtilization",
+    "readIOPSPercent",
+    "randomIOPSPercent",
+    "seqBlockSize",
+    "randomBlockSize",
+    "avgReadByte",
+    "avgWriteByte",
+    "writeIOPSPercent",
+    "sequentialIOPSPercent"
+   ],
+   "relations": [
+    "raidStorage",
+    "raidPG",
+    "raidPort",
+    "raidPool",
+    "raidMPB",
+    "raidClpr",
+    "raidURJnl",
+    "raidVirtualLdev",
+    "nvmNamespace",
+    "raidStorageVSM"
+   ]
+  },
+  "raidVirtualLdev": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "virtualLdevNumber",
+    "virtualSerialNumber",
+    "virtualDkcName",
+    "isGadEnabled"
+   ],
+   "metrics": [],
+   "relations": [
+    "raidStorage",
+    "raidStorageVSM"
+   ]
+  },
+  "raidPair": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "pSerial",
+    "pVol",
+    "sSerial",
+    "sVol",
+    "copyType",
+    "status",
+    "muNum"
+   ],
+   "metrics": [],
+   "relations": [
+    "raidStorage",
+    "raidLdev",
+    "raidURJnl"
+   ]
+  },
+  "sp": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "wwn"
+   ],
+   "metrics": [],
+   "relations": []
+  },
+  "raidPortGroup": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name"
+   ],
+   "metrics": [],
+   "relations": [
+    "raidStorage",
+    "raidLdev"
+   ]
+  },
+  "raidLdevHba": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "wwn",
+    "upper",
+    "controlMode",
+    "priorityMode"
+   ],
+   "metrics": [],
+   "relations": [
+    "raidStorage",
+    "raidPortWWN",
+    "raidLdev"
+   ]
+  },
+  "raidURJnl": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "muNum",
+    "consistencyGroupId",
+    "journalStatus",
+    "numOfActivePaths",
+    "usageRate",
+    "capacityInGB",
+    "numberOfBlocks",
+    "numOfLdevs",
+    "firstLdevId"
+   ],
+   "metrics": [
+    "masterJNLDataUsage",
+    "restoreJNLDataUsage"
+   ],
+   "relations": [
+    "raidStorage"
+   ]
+  },
+  "raidDrive": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "usedEndurance",
+    "driveLocationId",
+    "parityGroup",
+    "driveType",
+    "driveModel"
+   ],
+   "metrics": [],
+   "relations": [
+    "raidStorage",
+    "raidPG"
+   ]
+  },
+  "raidNVMSubsystemPort": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "nvmSubsystemID",
+    "portName"
+   ],
+   "metrics": [],
+   "relations": [
+    "raidStorage",
+    "raidNVMSubsystem",
+    "raidPort"
+   ]
+  },
+  "raidNVMSubsystem": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "nvmSubsystemID",
+    "nvmSubsystemNQN",
+    "nvmSubsystemNickname",
+    "nvmNamespaceSecurity"
+   ],
+   "metrics": [],
+   "relations": [
+    "raidStorage"
+   ]
+  },
+  "raidNVMHost": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "nvmHostNQN",
+    "nvmHostNickname"
+   ],
+   "metrics": [],
+   "relations": [
+    "raidStorage"
+   ]
+  },
+  "nvmNamespace": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "nvmSubsystemID",
+    "nvmNamespaceID",
+    "nvmNamespaceNickname"
+   ],
+   "metrics": [],
+   "relations": [
+    "raidStorage",
+    "raidNVMSubsystem"
+   ]
+  },
+  "raidNVMNamespacePath": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "nvmSubsystemID",
+    "nvmNamespaceID",
+    "nvmHostNQN"
+   ],
+   "metrics": [],
+   "relations": [
+    "raidStorage",
+    "raidNVMSubsystem",
+    "nvmNamespace",
+    "raidNVMHost"
+   ]
+  },
+  "raidStorageVSM": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "virtualSerialNumber",
+    "modelName",
+    "targetLdevCount"
+   ],
+   "metrics": [
+    "readIOPS",
+    "readHit",
+    "writeIOPS",
+    "readTransRate",
+    "writeTransRate",
+    "transferRate",
+    "readResponseTime",
+    "writeResponseTime",
+    "responseTime",
+    "totalIOPS"
+   ],
+   "relations": [
+    "raidStorage",
+    "raidVSM"
+   ]
+  },
+  "raidVSM": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [
+    "name",
+    "virtualSerialNumber",
+    "modelName"
+   ],
+   "metrics": [],
+   "relations": []
+  },
+  "vooCluster": {
+   "device": "VSP One Object",
+   "source": "guide",
+   "config": [
+    "name",
+    "fqdn",
+    "location",
+    "systemName",
+    "productName",
+    "version",
+    "region",
+    "totalShards",
+    "totalCapacityInBytes",
+    "usedCapacity",
+    "usedCapacityPercentage",
+    "availableCapacity",
+    "s3ObjectsIngested",
+    "s3BytesIngested",
+    "s3ObjectsRead",
+    "s3BytesRead"
+   ],
+   "metrics": [],
+   "relations": [
+    "vooStorageComponent",
+    "vooBucket"
+   ],
+   "synthetic": [
+    "syn_vooCluster_s3ObjectsIngested",
+    "syn_vooCluster_s3BytesIngested",
+    "syn_vooCluster_s3ObjectsRead",
+    "syn_vooCluster_s3BytesRead"
+   ]
+  },
+  "vooStorageComponent": {
+   "device": "VSP One Object",
+   "source": "guide",
+   "config": [
+    "name",
+    "type",
+    "totalCapacityInBytes",
+    "usedCapacity",
+    "usedCapacityPercentage",
+    "availableCapacity"
+   ],
+   "metrics": [],
+   "relations": [
+    "vooCluster"
+   ]
+  },
+  "vooBucket": {
+   "device": "VSP One Object",
+   "source": "guide",
+   "config": [
+    "name",
+    "objectCount",
+    "totalBytes"
+   ],
+   "metrics": [
+    "putIOPS",
+    "getIOPS",
+    "deleteIOPS",
+    "bulkDeleteIOPS",
+    "bytesIngested",
+    "bytesRead"
+   ],
+   "relations": [
+    "vooCluster"
+   ]
+  },
+  "hnasSystem": {
+   "device": "VSP One File",
+   "source": "guide",
+   "config": [
+    "name",
+    "location",
+    "clusterSize",
+    "mode",
+    "model",
+    "uuid",
+    "healthStatus"
+   ],
+   "metrics": [],
+   "relations": []
+  },
+  "hnasNode": {
+   "device": "VSP One File",
+   "source": "guide",
+   "config": [
+    "name",
+    "id",
+    "model",
+    "ipAddress",
+    "softwareVersion",
+    "serialNumber",
+    "status"
+   ],
+   "metrics": [
+    "total_ops",
+    "eth_rx",
+    "eth_tx",
+    "disk_read_latency",
+    "disk_write_latency",
+    "disk_stripe_write_latency",
+    "nvram_waited_alocs",
+    "smb_ops",
+    "smb_operation",
+    "hnas_nfs_ops",
+    "hssi_c1_rx",
+    "hssi_c1_tx",
+    "hssi_c2_rx",
+    "hssi_c2_tx",
+    "ftp_ops",
+    "ftp_operation",
+    "mmb_load",
+    "mfb_load",
+    "storage_ops",
+    "obj_replication_tx",
+    "hssi_c0_rx",
+    "hssi_c0_tx",
+    "hssi_c3_rx",
+    "hssi_c3_tx",
+    "hssi_c4_rx",
+    "hssi_c4_tx",
+    "pi_tcp_sockets_receive_fibers",
+    "smb2_ops",
+    "smb2_operation",
+    "nibrx_busy",
+    "nibtx_busy",
+    "nibtcp_busy",
+    "nicc_busy",
+    "fdp_busy",
+    "tdp_busy",
+    "fsa_busy",
+    "mbi_busy",
+    "wdir_busy",
+    "wfile_busy",
+    "wlog_busy",
+    "obj_busy",
+    "si_busy",
+    "si_sha256_busy",
+    "storage_rx",
+    "storage_tx",
+    "smb2_1_ops",
+    "smb2_1_operation",
+    "smb2_0_ops",
+    "smb2_0_operation",
+    "smb3_ops",
+    "smb3_operation",
+    "nfs2_ops",
+    "nfs2_operation",
+    "nfs3_ops",
+    "nfs3_operation",
+    "nfs4_ops",
+    "nfs4_operation",
+    "nfs4_0_ops",
+    "nfs4_0_operation"
+   ],
+   "relations": [
+    "hnasSystem"
+   ]
+  },
+  "hnasFCPort": {
+   "device": "VSP One File",
+   "source": "guide",
+   "config": [
+    "name"
+   ],
+   "metrics": [
+    "fcport_rx",
+    "fcport_tx"
+   ],
+   "relations": [
+    "hnasNode"
+   ]
+  },
+  "hnasEthernetPort": {
+   "device": "VSP One File",
+   "source": "guide",
+   "config": [
+    "name",
+    "ethport_speed"
+   ],
+   "metrics": [
+    "ethport_rx",
+    "ethport_tx",
+    "ethport_utilization"
+   ],
+   "relations": [
+    "hnasNode"
+   ]
+  },
+  "hnasEVS": {
+   "device": "VSP One File",
+   "source": "guide",
+   "config": [
+    "name",
+    "Type",
+    "ipAddresses",
+    "status",
+    "isVirusScanEnabled",
+    "currentNode",
+    "preferredNode",
+    "port"
+   ],
+   "metrics": [],
+   "relations": [
+    "hnasNode"
+   ]
+  },
+  "hnasFS": {
+   "device": "VSP One File",
+   "source": "guide",
+   "config": [
+    "name",
+    "permanent_id",
+    "capacityInGB",
+    "used_capacity",
+    "block_size",
+    "confinedInGB",
+    "state",
+    "flag",
+    "snapshotsSumInGB",
+    "logicalCapacityInGB",
+    "dedupeSpaceInGB",
+    "dedupeEnabled",
+    "thinProvisioningEnabled",
+    "freeCapacityInGB",
+    "isSyslocked",
+    "isObjectReplicationTarget"
+   ],
+   "metrics": [
+    "fs_data_read",
+    "fs_data_written",
+    "fs_operations"
+   ],
+   "relations": [
+    "hnasEVS",
+    "hnasStoragePool"
+   ]
+  },
+  "hnasHDPPool": {
+   "device": "VSP One File",
+   "source": "guide",
+   "config": [
+    "name",
+    "freeCapacityInGB",
+    "serialNumber"
+   ],
+   "metrics": [],
+   "relations": [
+    "hnasStoragePool"
+   ]
+  },
+  "hnasShare": {
+   "device": "VSP One File",
+   "source": "guide",
+   "config": [
+    "name",
+    "path",
+    "type",
+    "fs_label",
+    "fs_size",
+    "fs_free_size",
+    "formatted",
+    "mounted",
+    "failed",
+    "access_snapshots",
+    "display_snapshots",
+    "tx_setting",
+    "accessConfig",
+    "isABEEnabled",
+    "isScanForVirusesEnabled",
+    "snapshotOption",
+    "comment"
+   ],
+   "metrics": [],
+   "relations": [
+    "hnasSystem",
+    "hnasFS"
+   ]
+  },
+  "hnasVV": {
+   "device": "VSP One File",
+   "source": "guide",
+   "config": [
+    "name",
+    "email",
+    "root",
+    "usage_bytes",
+    "file_count",
+    "fsName",
+    "quotaEnabled"
+   ],
+   "metrics": [],
+   "relations": [
+    "hnasFS"
+   ]
+  },
+  "hnasQuota": {
+   "device": "VSP One File",
+   "source": "guide",
+   "config": [
+    "name",
+    "viVol",
+    "group",
+    "user",
+    "type",
+    "usage",
+    "usage_limit",
+    "usage_percent",
+    "usage_warn",
+    "usage_critical",
+    "usage_reset",
+    "file_count",
+    "file_count_limit",
+    "file_count_warning",
+    "file_count_critical",
+    "file_count_reset"
+   ],
+   "metrics": [],
+   "relations": [
+    "hnasVV",
+    "hnasFS",
+    "hnasSystem"
+   ]
+  },
+  "hnasStoragePool": {
+   "device": "VSP One File",
+   "source": "guide",
+   "config": [
+    "name",
+    "free_pct",
+    "capacityInGB",
+    "used_capacity",
+    "isHealthy",
+    "chunkSize"
+   ],
+   "metrics": [],
+   "relations": [
+    "hnasSystem",
+    "hnasSystemDevice"
+   ]
+  },
+  "hnasSystemDevice": {
+   "device": "VSP One File",
+   "source": "guide",
+   "config": [
+    "name",
+    "device_id",
+    "capacityInGB",
+    "sd_label",
+    "rack",
+    "lun",
+    "pool_owner",
+    "role",
+    "serial_num",
+    "blocksize",
+    "tier",
+    "ctrlr_port",
+    "dev_name",
+    "sub_model",
+    "type_make",
+    "type_model"
+   ],
+   "metrics": [],
+   "relations": [
+    "hnasSystem",
+    "raidLdev"
+   ]
+  },
+  "hnasNodeSystemDevice": {
+   "device": "VSP One File",
+   "source": "guide",
+   "config": [
+    "name"
+   ],
+   "metrics": [
+    "queuedDiskSHAReads",
+    "queuedDiskReads",
+    "queuedDiskWrites",
+    "ScanQueuedTimeAvg",
+    "ScanQueuedTimeCnt",
+    "TotalScanTimeIncludingQueuedTimeAvg",
+    "TotalScanTimeIncludingQueuedTimeCnt"
+   ],
+   "relations": [
+    "hnasSystem",
+    "hnasNode",
+    "hnasSystemDevice"
+   ]
+  },
+  "raidStorage, raidPool, raidPG, raidMPB": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [],
+   "metrics": [],
+   "relations": [],
+   "synthetic": [
+    "syn_raidLdev_totalIOPS",
+    "syn_raidLdev_writeTransRate",
+    "syn_raidLdev_responseTime"
+   ]
+  },
+  "raidStorage, raidClpr, raidPG, raidMPB": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [],
+   "metrics": [],
+   "relations": [],
+   "synthetic": [
+    "syn_raidLdev_readHit"
+   ]
+  },
+  "raidStorage, raidClpr, raidMPB": {
+   "device": "Hitachi Block Storage",
+   "source": "guide",
+   "config": [],
+   "metrics": [],
+   "relations": [],
+   "synthetic": [
+    "syn_raidLdev_writeHit"
+   ]
+  },
+  "host": {
+   "device": "Hosts, fabric and VMware",
+   "source": "observed",
+   "config": [],
+   "metrics": [],
+   "relations": [
+    "hba",
+    "disk",
+    "vm",
+    "lun"
+   ]
+  },
+  "hba": {
+   "device": "Hosts, fabric and VMware",
+   "source": "observed",
+   "config": [
+    "wwn"
+   ],
+   "metrics": [],
+   "relations": [
+    "host",
+    "hbaPort"
+   ]
+  },
+  "hbaPort": {
+   "device": "Hosts, fabric and VMware",
+   "source": "observed",
+   "config": [
+    "wwpn"
+   ],
+   "metrics": [],
+   "relations": [
+    "hba",
+    "switchPort",
+    "raidHG",
+    "sp"
+   ]
+  },
+  "switchPort": {
+   "device": "Hosts, fabric and VMware",
+   "source": "observed",
+   "config": [],
+   "metrics": [],
+   "relations": [
+    "hbaPort",
+    "raidPort",
+    "sp",
+    "zone"
+   ]
+  },
+  "zone": {
+   "device": "Hosts, fabric and VMware",
+   "source": "observed",
+   "config": [],
+   "metrics": [],
+   "relations": [
+    "switchPort"
+   ]
+  },
+  "vm": {
+   "device": "Hosts, fabric and VMware",
+   "source": "observed",
+   "config": [
+    "powerState",
+    "provisionedSpace",
+    "usedSpace",
+    "toolsStatus"
+   ],
+   "metrics": [
+    "cpuUsage",
+    "cpuReady",
+    "memUsage",
+    "diskUsage"
+   ],
+   "relations": [
+    "host",
+    "disk",
+    "ds"
+   ]
+  },
+  "ds": {
+   "device": "Hosts, fabric and VMware",
+   "source": "observed",
+   "config": [
+    "type",
+    "capacityGB",
+    "freeSpaceGB",
+    "provisionedSpace"
+   ],
+   "metrics": [],
+   "relations": [
+    "vm",
+    "disk"
+   ]
+  },
+  "disk": {
+   "device": "Hosts, fabric and VMware",
+   "source": "observed",
+   "config": [
+    "capacity",
+    "vendor",
+    "model",
+    "type"
+   ],
+   "metrics": [
+    "diskRead",
+    "diskWrite"
+   ],
+   "relations": [
+    "host",
+    "vm",
+    "ds",
+    "raidLdev",
+    "lun"
+   ]
+  },
+  "lun": {
+   "device": "Hosts, fabric and VMware",
+   "source": "observed",
+   "config": [],
+   "metrics": [],
+   "relations": [
+    "host",
+    "raidLdev",
+    "disk"
+   ]
+  }
+ }
+}

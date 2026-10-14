@@ -14,6 +14,7 @@ import { Spec, type Operation, fileFields, isMultipart, toolParamName } from "./
 import { Vsp360Client, loadConfig, type CallArgs } from "./client.js";
 import { OperationIndex, analyticsHint } from "./search.js";
 import { DecisionLog } from "./decisionlog.js";
+import { AnalyticsFields } from "./analyticsfields.js";
 import { features as decisionFeatures, predict, type Decision, type DecisionModel } from "./decision.js";
 
 type Json = any;
@@ -32,6 +33,7 @@ const modelPath = process.env.VSP360_DECISION_MODEL ?? join(here, "..", "spec", 
 const decisionModel: DecisionModel | undefined = existsSync(modelPath) ? JSON.parse(readFileSync(modelPath, "utf8")) : undefined;
 const showHint = !!decisionModel && (hintMode === "true" || (hintMode === "ab" && Math.random() < 0.5));
 const index = new OperationIndex(spec.operations.values(), examples);
+const analyticsFields = new AnalyticsFields(process.env.VSP360_ANALYTICS_FIELDS ?? join(here, "..", "spec", "analytics-fields.json"));
 const decisions = new DecisionLog(process.env.VSP360_DECISION_LOG || undefined, Number(process.env.VSP360_DECISION_LINK_SECONDS) || 120);
 // Collection mode: every search must carry the user's request, and every call must be to an operation that
 // came up in a search within the window, so each question yields a labelled search. Needs the decision log.
@@ -86,7 +88,10 @@ const META_TOOLS: Tool[] = [
       "parameters, request body schema and response schema.",
     inputSchema: {
       type: "object",
-      properties: { operationId: { type: "string", description: "operationId from vsp360_list_operations" } },
+      properties: {
+        operationId: { type: "string", description: "operationId from vsp360_list_operations" },
+        resourceType: { type: "string", description: "analyticsRunQuery only: an MQL resource type (e.g. raidPort, raidPool, vm) to list all its attributes and relations." },
+      },
       required: ["operationId"],
     },
     annotations: { readOnlyHint: true, openWorldHint: false },
@@ -248,6 +253,11 @@ function describeOperation(args: Json) {
   const op = spec.operations.get(args.operationId);
   if (!op) return text(`Unknown operationId "${args.operationId}". Use vsp360_list_operations to find it.`, true);
   decisions.describe(op.operationId);
+  if (op.operationId === "analyticsRunQuery" && args.resourceType) {
+    const t = analyticsFields.type(String(args.resourceType));
+    if (!t) return text(`Unknown MQL resource type "${args.resourceType}". Known types: ${analyticsFields.names().join(", ")}.`, true);
+    return text(JSON.stringify(t, null, 2));
+  }
   const out: Json = {
     operationId: op.operationId,
     method: op.method,
@@ -263,6 +273,7 @@ function describeOperation(args: Json) {
     if (isMultipart(op)) out.requestBody.fileFields = fileFields(op);
   }
   out.response = spec.responseSchema(op);
+  if (op.operationId === "analyticsRunQuery" && analyticsFields.loaded) out.mqlReference = analyticsFields.reference();
   return text(JSON.stringify(out, null, 2));
 }
 
