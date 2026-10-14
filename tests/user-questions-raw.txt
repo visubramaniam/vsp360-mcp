@@ -1,0 +1,176 @@
+## 1. Discovery & MCP Meta-Tools
+
+1. What VSP 360 API operation tags and areas are currently available to query?
+2. How do I inspect the input schema and required parameters for registering a new storage system?
+3. Which VSP 360 operations support write or mutation capabilities in our current environment?
+4. Can you search the API specification for operations related to ESXi host path provisioning?
+5. What are the required permissions and prerequisites for triggering an immediate snapshot policy?
+
+---
+
+## 2. Device Registry & Storage Inventory
+
+6. List all storage arrays currently registered in VSP 360.
+7. Show detailed system specifications for the array with ID `vsp-7k-01`.
+8. Are there any unassigned or unregistered file and object storage devices detected on the network?
+9. Which storage systems in our fleet are running out-of-date firmware or microcode?
+10. Show me all logical devices (LDEVs) that currently do not have an active host path mapped.
+11. Filter the storage inventory for systems located in Data Center East.
+12. What is the status of the background device registration job with ID `job-9921`?
+13. How many block storage arrays versus object storage nodes are managed by this platform?
+14. Can you validate this bulk device registration CSV file before I submit it?
+15. Retrieve the serial numbers and model numbers for all connected VSP E-series arrays.
+16. Which storage pools across all registered arrays have crossed 80% physical capacity utilization?
+17. Display the detailed network configuration for storage system `sys-02`.
+
+---
+
+## 3. Host & Hypervisor Discovery
+
+18. Discover all ESXi hypervisors currently attached to our storage fabrics.
+19. Show all registered FC WWNs and iSCSI IQNs connected to array `vsp-800`.
+20. Are there any hosts with degraded or dead paths to their assigned storage LUNs?
+21. List all host groups configured on storage array `sys-01`.
+22. Which VMware vSphere hosts have access to datastore volume `LDEV 10:2A`?
+23. Identify any newly added physical servers that haven't been assigned to a host group yet.
+24. Display the multipathing status and OS type for host `app-srv-04`.
+25. Run a discovery job to scan for newly zoned HBA ports across the SAN fabric.
+26. Show all hypervisor clusters managed by this VSP 360 instance.
+27. Which hosts are generating the highest IOPS across the entire storage topology?
+
+---
+
+## 4. Platform Alerts & Event Monitoring
+
+28. Are there any active critical alerts across all registered VSP storage arrays?
+29. Show all platform alerts triggered in the last 24 hours related to hardware component failures.
+30. Silence or acknowledge alert `ALT-8832` regarding a power supply degraded state.
+31. List all unacknowledged high-severity alerts for pool `pool-01`.
+32. Filter the platform alert log by category "Connectivity".
+33. What was the exact timestamp and root cause of alert `ALT-4412`?
+34. Show active alerts associated with storage controller thermal/overheating warnings.
+35. How many total warning and critical alerts have occurred this past week?
+36. Retrieve the notification rules configured for high-priority platform events.
+37. Who acknowledged the storage path loss alert for host group `DB-Cluster`?
+
+---
+
+## 5. Cluster Health & System Diagnostics
+
+38. What is the overall health score and status of the VSP 360 cluster?
+39. Generate and download a system diagnostic support bundle for cluster troubleshooting.
+40. Are all VSP 360 cluster nodes currently synchronized and healthy?
+41. Show CPU and memory utilization trends for the VSP 360 management nodes.
+42. Run a full health check on storage system `vsp-5000` and report any anomalies.
+43. What is the operational status of the system log aggregation service?
+44. Download the latest system diagnostic logs saved to the default download directory.
+45. Are any cluster microservices or daemon processes currently restarting or down?
+46. Check if there are any pending hardware component maintenance flags on cluster node 2.
+47. Show recent diagnostic dump files available for download.
+
+---
+
+## 6. Storage Resource Management & Performance
+
+48. List all dynamic provisioning pools and their current allocation levels.
+49. Which logical devices (LDEVs) have experienced the highest latency over the past hour?
+50. Find all unallocated parity groups across our storage systems.
+51. Display IOPS, throughput, and response time metrics for volume `vol-db-prod`.
+52. Show thin-provisioning savings and deduplication/compression ratios for `pool-02`.
+53. Which storage pools are projected to run out of capacity within the next 30 days?
+54. List all LUN mappings configured on host group `K8s-Worker-Nodes`.
+55. Find all volumes larger than 5 TB that have had zero I/O activity in the last 30 days.
+56. What is the current cache hit ratio on storage system `vsp-7000`?
+57. Show total subscribed capacity versus actual physical capacity used across all pools.
+
+---
+
+## 7. Data Protection, Snapshots & Replication
+
+58. List all snapshot and replication policies currently active in VSP 360.
+59. Trigger an immediate snapshot for target volume `LDEV-1024` outside its normal schedule.
+60. What is the replication status of our Global Active Device (GAD) active-active pairs?
+61. Are any ShadowImage or Thin Image snapshot copy tasks currently failing?
+62. List all recovery points available for the SQL database volume group.
+63. Show the synchronization status and write-lag for remote replication pair `pair-replica-01`.
+64. Which protection policies are configured to copy data to secondary object storage?
+65. Create a new point-in-time snapshot for protection group `Finance-DB`.
+66. Find all storage volumes that are missing an assigned data protection policy.
+67. What is the snapshot retention period configured for policy `Gold-Tier-Daily`?
+68. Check if any Non-Disruptive Migration (NDM) replication sessions are active.
+69. Resume the suspended replication copy pair for `DR-Volume-05`.
+
+---
+
+## 8. Orchestration & Storage Provisioning Workflows
+
+70. What orchestration workflows are available for automated storage provisioning?
+71. Provision a 500 GB block volume on `pool-01` and attach it to host `app-server-12`.
+72. Execute the workflow to extend volume `LDEV-55` by 200 GB.
+73. What is the current execution status of workflow instance `wf-inst-901`?
+74. Unmap and delete logical device `LDEV-881` after confirming it has no active host attachments.
+75. Run the workflow to configure a new Global Active Device (GAD) active-active volume pair.
+76. Expand host group `ESXi-Cluster-01` by adding FC WWN `21:00:00:24:ff:aa:01:02`.
+77. Show all failed workflow executions in the past 7 days and their failure step details.
+78. Execute the automated Non-Disruptive Migration (NDM) cutover step for `vol-legacy-01`.
+79. Cancel the currently running provisioning job `job-7734`.
+
+---
+
+## 9. Analytics & Custom Telemetry Queries
+
+80. Run an analytics query to find the top 5 most I/O-intensive LDEVs over the last 6 hours.
+81. Query latency distribution across all Fibre Channel ports on system `vsp-800`.
+82. Generate a custom performance query showing read vs. write ratios for host group `SAP-HANA`.
+83. Extract historic queue-depth metrics for host HBA port `01:A`.
+84. Query the analytics engine for drive-level read error rates across all SSD drives.
+85. What is the average write latency on pool `pool-flash-01` during peak business hours?
+86. Run an inventory filter query to list all volumes tagged with environment "Staging".
+87. Retrieve historical bandwidth usage on inter-switch ISL connections for array `vsp-1500`.
+88. Execute a telemetry query to aggregate daily read and write IOPS for the past month.
+89. Query the correlation between front-end port saturation and host response time.
+
+---
+
+## 10. Identity, Access Control & Security Settings
+
+90. List all local users, service accounts, and assigned roles configured in VSP 360.
+91. Is Active Directory or LDAP integration currently connected and successfully authenticating?
+92. Test the connection settings for Active Directory server `ad.corp.local`.
+93. Which user accounts have administrator or super-user privileges in the platform?
+94. Review current access policies governing storage group modifications.
+95. Show all active user sessions and Privileged Access Management (PAM) access logs.
+96. Is Single Sign-On (SSO) enabled for the platform, or is it blocked?
+97. Check access policy details for service account `mcp-automation-user`.
+98. What roles and permissions are assigned to user group `Storage-Ops-Team`?
+99. Audit user login events and failed authentication attempts over the last 48 hours.
+
+---
+
+## 11. Platform Upgrades, Certificates & System Maintenance
+
+100. Validate the bulk upgrade package uploaded at file path `/tmp/vsp360-v1.5.zst`.
+101. What is the current installed version of VSP 360, and are software updates available?
+102. Check the expiration dates for all installed TLS and trusted CA certificates.
+103. Generate a Certificate Signing Request (CSR) for the VSP 360 web management portal.
+104. Upload and install a new TLS server certificate from file `/certs/vsp360.crt`.
+105. Show all registered Trusted CA Certificates and their issuing certificate authorities.
+106. What is the progress status of the background platform upgrade job?
+107. Check if any SSL/TLS certificates will expire within the next 30 days.
+108. What are the system prerequisites before initiating a non-disruptive cluster update?
+109. List all installed application lifecycle packages and active platform profiles.
+
+---
+
+## 12. Usage, Capacity & Billing Reports
+
+110. Export and download the monthly storage usage and billing report as a CSV file.
+111. Show storage capacity consumption broken down by departmental billing tags.
+112. What is the total provisioned vs. allocated vs. written storage capacity across the enterprise?
+113. List the top 10 largest storage-consuming workloads across all business units.
+114. Generate a chargeback summary report for host group `DBA-Oracle`.
+115. What has been the growth rate of thin-provisioned pools over the past quarter?
+116. Retrieve raw usage telemetry data for export to our external enterprise billing platform.
+117. Show deduplication efficiency metrics across all flash storage tier pools.
+118. Which tenant groups or projects are exceeding their allocated storage quotas?
+119. Download the historical capacity trend report for storage cluster `vsp-cluster-01`.
