@@ -239,7 +239,8 @@ function suggestionText(d: Decision, top: string): string {
     call: `use ${top}.`,
     compare: "describe the top 2-3 results and pick by their descriptions.",
     analytics: "answer with analyticsRunQuery (MQL); describe it for the syntax.",
-    not_found: "none of these is likely right. Search again with different words, or tell the user the API may not cover this.",
+    // Worded to keep Claude looking: in A/B testing, "the API may not cover this" made it give up too early.
+    not_found: "the top result is probably not the right one. Describe the top 2-3 to check, then search again with different words if none fits.",
   }[d];
 }
 
