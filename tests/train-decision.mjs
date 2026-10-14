@@ -60,9 +60,12 @@ function batchRows(path) {
   const sessions = new Map();
   for (const e of lines.map((l) => JSON.parse(l))) (sessions.get(e.session) ?? sessions.set(e.session, []).get(e.session)).push(e);
   const out = [];
-  let skipped = 0;
+  let skipped = 0, hinted = 0;
   for (const events of sessions.values()) {
     const searches = events.filter((e) => e.event === "search");
+    // Sessions that were shown the hint were steered by the model itself; learning from them would teach it to
+    // agree with its own past suggestions. HINTED=1 includes them anyway.
+    if (process.env.HINTED !== "1" && searches.some((s) => s.suggestion?.shown)) { hinted += searches.length; continue; }
     const chosen = events.find((e) => e.event === "call" && e.ok)?.operationId;
     const request = searches[0]?.request ?? "";
     const platformForArray = /^vsp360Get(MetricsQuery|MetricsQueryRange|SystemInfo)$/.test(chosen ?? "") && /\b(pool|port|ldev|volume|array|host group|lun)s?\b/i.test(request);
@@ -73,7 +76,7 @@ function batchRows(path) {
     const held = [...request].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7) % 5 === 0;
     for (const s of searches) out.push({ ...row(s.query, want, held ? "batch-test" : "batch"), request });
   }
-  console.log(`Batch log: ${out.length} labelled searches, ${skipped} skipped (no successful call, or platform metrics for an array question)`);
+  console.log(`Batch log: ${out.length} labelled searches, ${skipped} skipped (no successful call, or platform metrics for an array question), ${hinted} from sessions that saw the hint`);
   return out;
 }
 const batch = batchRows(new URL("../reports/decisions-batch.jsonl", import.meta.url));
