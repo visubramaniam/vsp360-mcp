@@ -1,0 +1,97 @@
+<title>Unmapped Host Groups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap">
+<style>
+/* Layout: single readable column; one summary strip, then one block per storage array */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --fg:#17202b; --muted:#5a6676; --line:#dde2e8;
+  --accent:#0b6e8a; --accent-soft:#e3f1f5; --warn:#8a5a00; --warn-soft:#fbf1dc;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f141a; --surface:#161d25; --fg:#e4e9ef; --muted:#93a0b0; --line:#2a333e;
+  --accent:#5cc3df; --accent-soft:#12303a; --warn:#f0c46a; --warn-soft:#2e2412; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0f141a; --surface:#161d25; --fg:#e4e9ef; --muted:#93a0b0; --line:#2a333e;
+  --accent:#5cc3df; --accent-soft:#12303a; --warn:#f0c46a; --warn-soft:#2e2412; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);padding:0 16px}
+main{max-width:880px;margin:0 auto;padding-block:40px 64px;display:grid;gap:28px}
+h1,h2{font-family:var(--display);font-weight:600;text-wrap:balance;margin:0}
+h1{font-size:clamp(28px,5vw,38px);line-height:1.1}
+.eyebrow{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 8px}
+.lede{color:var(--muted);max-width:65ch;margin:10px 0 0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.stat{background:var(--surface);padding:14px 16px}
+.stat b{display:block;font:600 28px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--muted)}
+.stat.key b{color:var(--accent)}
+.array{display:grid;gap:12px}
+.array header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;border-bottom:2px solid var(--fg);padding-bottom:6px}
+.array h2{font-size:22px}
+.serial{font:13px var(--mono);color:var(--muted)}
+.count{margin-left:auto;font-size:14px;color:var(--muted)}
+.count b{color:var(--fg);font-variant-numeric:tabular-nums}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font:500 12px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:6px 10px;border-bottom:1px solid var(--line)}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+td.hg{font-weight:500;white-space:nowrap}
+td.ports{line-height:1.9}
+.num{text-align:right;font-variant-numeric:tabular-nums;width:4em}
+code{font:13px var(--mono);background:var(--accent-soft);color:var(--fg);padding:1px 5px;border-radius:3px;white-space:nowrap}
+.tag{font:500 11px var(--mono);color:var(--warn);background:var(--warn-soft);padding:1px 6px;border-radius:3px;margin-left:6px;white-space:nowrap}
+.none{color:var(--muted);margin:4px 0}
+details{font-size:14px;color:var(--muted)}
+summary{cursor:pointer;padding:4px 0}
+summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.dports{line-height:2;margin:6px 0 0}
+.notes{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:18px 20px}
+.notes h2{font-size:18px;margin-bottom:8px}
+.notes ul{margin:0;padding-left:20px;display:grid;gap:8px;max-width:70ch}
+footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+footer code{background:none;padding:0}
+@media (max-width:560px){td.hg{white-space:normal} .count{margin-left:0;width:100%}}
+</style>
+<main>
+<div>
+<p class="eyebrow">VSP 360 · Storage report · 11 Oct 2026</p>
+<h1>Servers with no volumes mapped</h1>
+<p class="lede">Host groups on the four managed VSP arrays that have no LUN paths. A host group stands for one server on one port, so each server usually appears on two or more ports.</p>
+</div>
+<div class="stats">
+<div class="stat"><b>4</b><span>storage arrays</span></div>
+<div class="stat"><b>395</b><span>host groups in total</span></div>
+<div class="stat"><b>91</b><span>with no LUNs</span></div>
+<div class="stat key"><b>20</b><span>named servers with no LUNs</span></div>
+</div>
+<section class="array" id="s840477">
+<header><h2>DC1-B28-B</h2><span class="serial">Serial 840477</span><span class="count"><b>10</b> servers</span></header>
+<div class="tbl"><table><thead><tr><th>Host group</th><th>Ports</th><th class="num">Paths</th></tr></thead><tbody><tr><td class="hg">TS_TEST</td><td class="ports"><code>CL1-A</code> <code>CL2-A</code> <code>CL3-C</code> <code>CL4-C</code></td><td class="num">4</td></tr><tr><td class="hg">HDIDProvisionedHostGroup_RG2</td><td class="ports"><code>CL3-A</code> <code>CL7-A</code> <code>CL8-A</code></td><td class="num">3</td></tr><tr><td class="hg">HDhg</td><td class="ports"><code>CL1-A</code> <code>CL5-A</code></td><td class="num">2</td></tr><tr><td class="hg">hggg1</td><td class="ports"><code>CL3-A</code> <code>CL4-A</code></td><td class="num">2</td></tr><tr><td class="hg">hggg2</td><td class="ports"><code>CL2-A</code> <code>CL5-A</code></td><td class="num">2</td></tr><tr><td class="hg">Hgggg1</td><td class="ports"><code>CL1-A</code> <code>CL4-A</code></td><td class="num">2</td></tr><tr><td class="hg">TestB28nonGAD</td><td class="ports"><code>CL1-A</code> <code>CL2-A</code></td><td class="num">2</td></tr><tr><td class="hg">Compass1_Server</td><td class="ports"><code>CL4-A</code></td><td class="num">1</td></tr><tr><td class="hg">hg_swati_25_3</td><td class="ports"><code>CL1-A</code></td><td class="num">1</td></tr><tr><td class="hg">hggg3</td><td class="ports"><code>CL2-A</code></td><td class="num">1</td></tr></tbody></table></div>
+<details><summary>11 default <code>G00</code> host groups (port host group 0)</summary><p class="dports"><code>CL1-C</code> <code>CL2-A</code> <code>CL2-C</code> <code>CL3-A</code> <code>CL3-C</code> <code>CL4-A</code> <code>CL4-C</code> <code>CL5-A</code> <code>CL6-A</code> <code>CL7-A</code> <code>CL8-A</code></p></details>
+</section><section class="array" id="s715022">
+<header><h2>DC2 E1090</h2><span class="serial">Serial 715022</span><span class="count"><b>8</b> servers</span></header>
+<div class="tbl"><table><thead><tr><th>Host group</th><th>Ports</th><th class="num">Paths</th></tr></thead><tbody><tr><td class="hg">AMDOCS-DC2</td><td class="ports"><code>CL1-A</code> <code>CL2-A</code></td><td class="num">2</td></tr><tr><td class="hg">DC1-GAD-B28 <span class="tag">replication / DR</span></td><td class="ports"><code>CL3-A</code> <code>CL4-A</code></td><td class="num">2</td></tr><tr><td class="hg">DC2-DGR <span class="tag">replication / DR</span></td><td class="ports"><code>CL3-A</code> <code>CL6-A</code></td><td class="num">2</td></tr><tr><td class="hg">DC2-GAD-E1090 <span class="tag">replication / DR</span></td><td class="ports"><code>CL3-A</code> <code>CL4-A</code></td><td class="num">2</td></tr><tr><td class="hg">DC2-HUR-1090 <span class="tag">replication / DR</span></td><td class="ports"><code>CL1-A</code> <code>CL2-A</code></td><td class="num">2</td></tr><tr><td class="hg">Demo-DC2</td><td class="ports"><code>CL1-A</code> <code>CL2-A</code></td><td class="num">2</td></tr><tr><td class="hg">GADTEST-DC1 <span class="tag">replication / DR</span></td><td class="ports"><code>CL3-A</code> <code>CL4-A</code></td><td class="num">2</td></tr><tr><td class="hg">GADTEST-DC2 <span class="tag">replication / DR</span></td><td class="ports"><code>CL3-A</code> <code>CL4-A</code></td><td class="num">2</td></tr></tbody></table></div>
+<details><summary>16 default <code>G00</code> host groups (port host group 0)</summary><p class="dports"><code>CL1-A</code> <code>CL1-B</code> <code>CL2-A</code> <code>CL2-B</code> <code>CL3-A</code> <code>CL3-B</code> <code>CL4-A</code> <code>CL4-B</code> <code>CL5-A</code> <code>CL5-B</code> <code>CL6-A</code> <code>CL6-B</code> <code>CL7-A</code> <code>CL7-B</code> <code>CL8-A</code> <code>CL8-B</code></p></details>
+</section><section class="array" id="s70249">
+<header><h2>DC1-B85-A</h2><span class="serial">Serial 70249</span><span class="count"><b>2</b> servers</span></header>
+<div class="tbl"><table><thead><tr><th>Host group</th><th>Ports</th><th class="num">Paths</th></tr></thead><tbody><tr><td class="hg">HDIDProvisionedHostGroup</td><td class="ports"><code>CL3-C</code> <code>CL4-C</code> <code>CL5-B</code></td><td class="num">3</td></tr><tr><td class="hg">HID-DP-00</td><td class="ports"><code>CL6-C</code></td><td class="num">1</td></tr></tbody></table></div>
+<details><summary>16 default <code>G00</code> host groups (port host group 0)</summary><p class="dports"><code>CL1-B</code> <code>CL1-C</code> <code>CL2-B</code> <code>CL2-C</code> <code>CL3-B</code> <code>CL3-C</code> <code>CL4-B</code> <code>CL4-C</code> <code>CL5-B</code> <code>CL5-C</code> <code>CL6-B</code> <code>CL6-C</code> <code>CL7-B</code> <code>CL7-C</code> <code>CL8-B</code> <code>CL8-C</code></p></details>
+</section><section class="array" id="s70272">
+<header><h2>DC2-B85-A</h2><span class="serial">Serial 70272</span><span class="count"><b>0</b> servers</span></header>
+<p class="none">No named host groups without LUNs.</p>
+<details><summary>8 default <code>G00</code> host groups (port host group 0)</summary><p class="dports"><code>CL1-B</code> <code>CL2-B</code> <code>CL3-B</code> <code>CL4-B</code> <code>CL5-B</code> <code>CL6-B</code> <code>CL7-B</code> <code>CL8-B</code></p></details>
+</section>
+<section class="notes">
+<h2>Before acting on this list</h2>
+<ul>
+<li><b>Data is from today's collection.</b> Volumes added or removed since the last VSP 360 collection run won't show yet.</li>
+<li><b>No LUNs doesn't mean unused.</b> WWN registration wasn't checked. A host group with WWNs and no LUNs may be waiting for provisioning.</li>
+<li><b>Replication and DR groups may be empty by design.</b> Groups tagged replication / DR (GAD, HUR, DGR) often get volumes only during a failover or test.</li>
+<li><b>Default groups are listed separately.</b> Every port has a default host group 0 (<code>xx-G00</code>). The 51 empty ones are collapsed under each array.</li>
+<li><b>Fibre Channel host groups only.</b> iSCSI targets may be stored under a separate resource type and aren't included.</li>
+</ul>
+</section>
+<footer>Source: VSP 360 Analytics query API, dataset <code>defaultDs</code>. Host groups (<code>raidHG</code>) compared against host groups with at least one LUN path (<code>raidHG/&amp;raidLU</code>), window 11 Oct 2026 00:00–23:59.</footer>
+</main>

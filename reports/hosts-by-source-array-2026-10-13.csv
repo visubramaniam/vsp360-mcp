@@ -1,0 +1,51 @@
+vcenter,cluster,host,arrays_used,source_array,luns,tib
+DC1,COE-ESXi-Cluster,coe-esxi-n1,1,20302,2,5.0
+DC1,COE-ESXi-Cluster,coe-esxi-n2,1,20302,2,5.0
+DC1,DC1-ESXi-Cluster,dc1-esxi-n1,2,DC1-B28-B,56,137.5
+DC1,DC1-ESXi-Cluster,dc1-esxi-n1,2,DC1-B85-A,4,4.03
+DC1,DC1-ESXi-Cluster,dc1-esxi-n2,4,DC1-B28-B,56,137.49
+DC1,DC1-ESXi-Cluster,dc1-esxi-n2,4,DC1-B85-A,4,4.03
+DC1,DC1-ESXi-Cluster,dc1-esxi-n2,4,SDS block 05d6 (unmanaged),11,6.17
+DC1,DC1-ESXi-Cluster,dc1-esxi-n2,4,Hitachi 08833e (unmanaged),3,0.03
+DC1,GSL-ESXi-Cluster,gsl-esxi-n1,2,DC1-B28-B,1,0.0
+DC1,GSL-ESXi-Cluster,gsl-esxi-n1,2,20302,2,25.0
+DC1,GSL-ESXi-Cluster,gsl-esxi-n2,2,20302,2,25.0
+DC1,GSL-ESXi-Cluster,gsl-esxi-n2,2,DC1-B28-B,1,0.0
+DC1,GSL-T41S-Cluster,gsl-esxi-n3,1,20302,2,25.0
+DC1,GSL-T41S-Cluster,gsl-esxi-n4,2,20302,2,25.0
+DC1,GSL-T41S-Cluster,gsl-esxi-n4,2,DC1-B28-B,1,0.0
+DC1,HCI-Cluster,hci-1,2,SDS block 033b (unmanaged),16,1.56
+DC1,HCI-Cluster,hci-1,2,DC1-B28-B,16,16.0
+DC1,HCI-Cluster,hci-2,2,DC1-B28-B,16,16.0
+DC1,HCI-Cluster,hci-2,2,SDS block 033b (unmanaged),16,1.56
+DC1,HCI-Cluster,hci-3,2,SDS block 033b (unmanaged),16,1.56
+DC1,HCI-Cluster,hci-3,2,DC1-B28-B,16,16.0
+DC1,HCI-Cluster,hci-4,3,DC1-B28-B,16,16.0
+DC1,HCI-Cluster,hci-4,3,SDS block 033b (unmanaged),16,1.56
+DC1,HCI-Cluster,hci-4,3,20302,1,11.0
+DC1,Infra-ESXi-Cluster,infra-esxi-n1,4,DC1-B28-B,22,41.09
+DC1,Infra-ESXi-Cluster,infra-esxi-n1,4,20302,16,55.39
+DC1,Infra-ESXi-Cluster,infra-esxi-n1,4,Hitachi 289e32 (unmanaged),1,0.0
+DC1,Infra-ESXi-Cluster,infra-esxi-n1,4,888888,1,0.0
+DC1,Infra-ESXi-Cluster,infra-esxi-n2,2,DC1-B28-B,13,31.4
+DC1,Infra-ESXi-Cluster,infra-esxi-n2,2,20302,16,55.39
+DC1,Infra-ESXi-Cluster,infra-esxi-n3,2,20302,16,55.39
+DC1,Infra-ESXi-Cluster,infra-esxi-n3,2,DC1-B28-B,19,40.79
+DC1,Infra-ESXi-Cluster,infra-esxi-n4,2,20302,16,55.39
+DC1,Infra-ESXi-Cluster,infra-esxi-n4,2,DC1-B28-B,13,31.4
+DC1,Infra-ESXi-Cluster-NEW,192.168.54.117,2,DC1-B28-B,2,12.0
+DC1,Infra-ESXi-Cluster-NEW,192.168.54.117,2,20302,1,5.0
+DC1,Infra-ESXi-Cluster-NEW,192.168.54.119,2,DC1-B28-B,1,10.0
+DC1,Infra-ESXi-Cluster-NEW,192.168.54.119,2,20302,1,5.0
+DC1,TE-ESXi-Cluster,te-esxi-n1,1,20302,1,10.0
+DC1,TE-ESXi-Cluster,te-esxi-n2,1,20302,1,10.0
+DC1,VSPOneObject,vsp1oesx8-1,1,SDS block 09ab (unmanaged),8,40.01
+DC1,VSPOneObject,vsp1oesx8-2,1,SDS block 09ab (unmanaged),8,40.01
+DC1,VSPOneObject,vsp1oesx8-3,1,SDS block 09ab (unmanaged),8,40.01
+DC1,VSPOneObject,vsp1oesx8-4,1,SDS block 09ab (unmanaged),8,40.01
+DC1,standalone,192.168.53.70,1,DC1-B28-B,3,40.0
+DC2,DC2-ESXi-Cluster,dc2-esxi-n1,3,DC2-B85-A,8,4.06
+DC2,DC2-ESXi-Cluster,dc2-esxi-n1,3,DC1-B85-A,5,5.02
+DC2,DC2-ESXi-Cluster,dc2-esxi-n1,3,DC1-B28-B,1,0.0
+DC2,DC2-ESXi-Cluster,dc2-esxi-n2,2,DC1-B85-A,5,5.02
+DC2,DC2-ESXi-Cluster,dc2-esxi-n2,2,DC1-B28-B,1,0.0

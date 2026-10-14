@@ -1,0 +1,6 @@
+{
+ "query": "raidStorage[=serialNumber rx 840477]/raidPort[@queueDepth rx b .*]{inputCounters=MULT(totalIOPS:responseTime),outputIntervalInSec=60}",
+ "rows": 160752,
+ "failed": [],
+ "empty": []
+}
