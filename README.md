@@ -144,6 +144,8 @@ npm install -g vsp360-mcp
 
 Each GitHub release also has the same package as `vsp360-mcp-<version>.tgz`, for machines that can't reach the registry.
 
+**Claude Code plugin.** The [`plugin/`](plugin/README.md) folder packages the server with capacity and health-check skills: `/plugin install vsp360-community --marketplace visubramaniam/vsp360-mcp`.
+
 The examples below use `vsp360-mcp` as the command; substitute the path from whichever install you chose.
 
 ### Claude Code
@@ -217,6 +219,8 @@ Users · Groups · Group Access · Service Accounts · Roles · Identity Provide
 `npm run package` builds every release package into `release/`. Use `--only npm,mcpb,standalone` and `--targets linux-x64,...` to build fewer, e.g. `npm run package -- --only standalone --targets darwin-arm64`. The standalone packages bundle Node.js 24, downloaded from nodejs.org and checked against its published SHA-256 sums.
 
 The [Release workflow](.github/workflows/release.yml) runs when a `v*` tag is pushed. It runs the tests, builds the packages and attaches them to the tag's GitHub release; if that release doesn't exist yet, it's created from the version's `CHANGELOG.md` section. It then publishes the same `.tgz` to the npm registry with [trusted publishing](https://docs.npmjs.com/trusted-publishers), so no npm token is stored and each version gets a provenance attestation; this is skipped if that version is already on npm. The trusted publisher is set up on npmjs.com under the package's **Settings → Trusted Publisher** (repository `visubramaniam/vsp360-mcp`, workflow `release.yml`). It pushes the `linux/amd64` and `linux/arm64` Docker image to `ghcr.io/visubramaniam/vsp360-mcp` using the workflow's own token, and also to Docker Hub if the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets are set. To rebuild an existing tag's packages, run the workflow by hand with that tag.
+
+The Claude plugin in `plugin/` pins the same version as `package.json` (in its `version` and its `npx vsp360-mcp@<version>` argument). Bump both with each release; `tests/unit/plugin.test.mjs` fails if they differ.
 
 ## Updating for a new VSP 360 release
 

@@ -1,0 +1,90 @@
+{
+  "name": "vsp360-community",
+  "displayName": "Hitachi VSP 360 (Community)",
+  "version": "0.1.19",
+  "description": "Community MCP server for Hitachi VSP 360: query alerts, inventory, capacity and performance through the VSP 360 REST API. Read-only by default. Not an official Hitachi Vantara product.",
+  "author": {
+    "name": "Vinod Subramaniam",
+    "url": "https://github.com/visubramaniam"
+  },
+  "homepage": "https://github.com/visubramaniam/vsp360-mcp/wiki",
+  "repository": "https://github.com/visubramaniam/vsp360-mcp",
+  "license": "MIT",
+  "keywords": ["hitachi", "vsp360", "storage", "san", "capacity", "performance"],
+  "documentationUrl": "https://github.com/visubramaniam/vsp360-mcp/blob/main/INSTALL.md",
+  "supportUrl": "https://github.com/visubramaniam/vsp360-mcp/issues",
+  "mcpServers": {
+    "vsp360": {
+      "command": "npx",
+      "args": ["-y", "vsp360-mcp@0.1.19"],
+      "env": {
+        "VSP360_URL": "${user_config.url}",
+        "VSP360_CLIENT_ID": "${user_config.client_id}",
+        "VSP360_CLIENT_SECRET": "${user_config.client_secret}",
+        "VSP360_TOOLSETS": "${user_config.toolsets}",
+        "VSP360_ALLOW_WRITES": "${user_config.allow_writes}",
+        "VSP360_CA_CERT": "${user_config.ca_cert}",
+        "VSP360_INSECURE_TLS": "${user_config.insecure_tls}",
+        "VSP360_DOWNLOAD_DIR": "${user_config.download_dir}",
+        "VSP360_UPLOAD_DIR": "${user_config.upload_dir}"
+      }
+    }
+  },
+  "userConfig": {
+    "url": {
+      "type": "string",
+      "title": "VSP 360 URL",
+      "description": "Base URL of your VSP 360, e.g. https://vsp360.example.com",
+      "required": true
+    },
+    "client_id": {
+      "type": "string",
+      "title": "Client ID",
+      "description": "Client ID of the VSP 360 service account",
+      "required": true
+    },
+    "client_secret": {
+      "type": "string",
+      "title": "Client secret",
+      "description": "Client secret of the VSP 360 service account. Stored in your system's secure credential store.",
+      "required": true,
+      "sensitive": true
+    },
+    "toolsets": {
+      "type": "string",
+      "title": "Direct toolsets",
+      "description": "Optional. Comma-separated API areas to expose as direct tools, e.g. Analytics / Query API,Device Registry,Platform Alerts",
+      "default": ""
+    },
+    "allow_writes": {
+      "type": "boolean",
+      "title": "Allow writes",
+      "description": "Allow operations that change VSP 360. Leave off for read-only access.",
+      "default": false
+    },
+    "ca_cert": {
+      "type": "string",
+      "title": "CA certificate",
+      "description": "Optional. Path to the PEM file of the CA that signed the VSP 360 certificate",
+      "default": ""
+    },
+    "insecure_tls": {
+      "type": "boolean",
+      "title": "Skip TLS verification",
+      "description": "Accept any certificate. For lab systems with self-signed certificates only.",
+      "default": false
+    },
+    "download_dir": {
+      "type": "string",
+      "title": "Download folder",
+      "description": "Optional. Where downloaded files are saved. Defaults to ~/Downloads/vsp360-mcp",
+      "default": ""
+    },
+    "upload_dir": {
+      "type": "string",
+      "title": "Upload folder",
+      "description": "Optional. The only folder files may be uploaded from. Read-only mode refuses uploads unless this is set.",
+      "default": ""
+    }
+  }
+}
