@@ -15,8 +15,8 @@ jobs:
       matrix:
         node: [22, 24]
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: ${{ matrix.node }}
           cache: npm
@@ -24,13 +24,14 @@ jobs:
       - run: npm test
 
   package:
-    # Builds the npm package and the Claude Desktop extension to catch packaging breakage early.
+    # Builds the npm package, the Claude Desktop extension and one standalone package to catch packaging breakage
+    # early. The standalone build checks the signature of the Node.js runtime's SHASUMS256.txt.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - run: npm run package -- --only npm,mcpb
+      - run: npm run package -- --targets linux-x64

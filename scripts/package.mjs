@@ -23,6 +23,9 @@ const stage = join(out, ".stage");
 const cache = join(out, ".cache");
 const { version } = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 const NODE_VERSION = process.env.NODE_RUNTIME_VERSION || "24.21.0";
+// Node.js release signing keys (github.com/nodejs/release-keys), pinned to a commit. If a release of NODE_VERSION
+// fails its signature check because a new releaser signed it, move this to a newer commit of that repository.
+const NODE_KEYRING = "https://raw.githubusercontent.com/nodejs/release-keys/481637f813e912c4aa3622d7964ab426c97b8e8d/gpg-only-active-keys/pubring.kbx";
 // The Claude Desktop extension packer, run with npx at build time.
 const MCPB = "@anthropic-ai/mcpb@2.1.2";
 
@@ -75,20 +78,61 @@ function buildMcpb(app) {
   run("npx", ["--yes", MCPB, "pack", dir, join(out, `vsp360-mcp-${version}.mcpb`)]);
 }
 
-/** Downloads a Node.js release archive once and checks it against the release's SHASUMS256.txt. */
+const NODE_BASE = `https://nodejs.org/dist/v${NODE_VERSION}`;
+
+async function download(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`GET ${url}: HTTP ${res.status}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+function hasGpgv() {
+  try {
+    execFileSync("gpgv", ["--version"], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+let nodeSumsLoaded;
+/** The Node.js release's SHASUMS256.txt, with its signature checked against the Node.js release keys. */
+const nodeSums = () => (nodeSumsLoaded ??= loadNodeSums());
+async function loadNodeSums() {
+  const sums = await download(`${NODE_BASE}/SHASUMS256.txt`);
+  if (!hasGpgv()) {
+    // CI must check it; a local build without GnuPG only warns.
+    if (process.env.CI) throw new Error("gpgv (GnuPG) is needed to check the signature of the Node.js release's SHASUMS256.txt");
+    log("warning: gpgv not found, so the signature of the Node.js release's SHASUMS256.txt is not checked; install GnuPG to check it");
+    return sums.toString();
+  }
+  const dir = join(cache, `node-v${NODE_VERSION}-signature`);
+  mkdirSync(dir, { recursive: true });
+  const [sumsFile, sigFile, keyring] = ["SHASUMS256.txt", "SHASUMS256.txt.sig", "pubring.kbx"].map((f) => join(dir, f));
+  writeFileSync(sumsFile, sums);
+  writeFileSync(sigFile, await download(`${NODE_BASE}/SHASUMS256.txt.sig`));
+  writeFileSync(keyring, await download(NODE_KEYRING));
+  try {
+    execFileSync("gpgv", ["--keyring", keyring, sigFile, sumsFile], { stdio: ["ignore", "ignore", "pipe"] });
+  } catch (e) {
+    throw new Error(`The Node.js ${NODE_VERSION} SHASUMS256.txt failed its signature check:\n${e.stderr}`);
+  }
+  log(`Node.js ${NODE_VERSION} SHASUMS256.txt: signature verified`);
+  return sums.toString();
+}
+
+/** Downloads a Node.js release archive once and checks it against the release's signed SHASUMS256.txt. */
 async function nodeArchive(target) {
   const file = `node-v${NODE_VERSION}-${target}.${target.startsWith("win") ? "zip" : "tar.gz"}`;
   const path = join(cache, file);
-  const base = `https://nodejs.org/dist/v${NODE_VERSION}`;
-  const sums = await (await fetch(`${base}/SHASUMS256.txt`)).text();
+  const base = NODE_BASE;
+  const sums = await nodeSums();
   const expected = sums.split("\n").find((l) => l.endsWith(`  ${file}`))?.split(" ")[0];
   if (!expected) throw new Error(`${file} is not listed in ${base}/SHASUMS256.txt`);
   if (!existsSync(path) || sha256(path) !== expected) {
     log(`downloading ${file}`);
-    const res = await fetch(`${base}/${file}`);
-    if (!res.ok) throw new Error(`GET ${base}/${file}: HTTP ${res.status}`);
     mkdirSync(cache, { recursive: true });
-    writeFileSync(path, Buffer.from(await res.arrayBuffer()));
+    writeFileSync(path, await download(`${base}/${file}`));
     if (sha256(path) !== expected) throw new Error(`${file} does not match its published SHA-256`);
   }
   return { path, top: file.replace(/\.(zip|tar\.gz)$/, "") };

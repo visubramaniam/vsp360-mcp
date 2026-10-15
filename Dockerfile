@@ -5,7 +5,7 @@
 # platform, so multi-arch builds don't run npm under QEMU emulation, where it can crash (SIGILL) and hang.
 
 # ---- build: compile TypeScript and pre-parse the spec ----
-FROM --platform=$BUILDPLATFORM node:22-alpine AS build
+FROM --platform=$BUILDPLATFORM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
@@ -16,13 +16,13 @@ COPY scripts/cache-spec.mjs ./scripts/
 RUN npm run build
 
 # ---- production dependencies ----
-FROM --platform=$BUILDPLATFORM node:22-alpine AS deps
+FROM --platform=$BUILDPLATFORM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 
 # ---- runtime ----
-FROM node:22-alpine
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
 LABEL org.opencontainers.image.title="vsp360-mcp" \
       org.opencontainers.image.description="Community MCP server for Hitachi VSP 360 (not an official Hitachi Vantara product)" \
       org.opencontainers.image.source="https://github.com/visubramaniam/vsp360-mcp" \

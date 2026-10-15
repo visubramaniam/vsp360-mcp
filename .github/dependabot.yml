@@ -1,0 +1,17 @@
+# Weekly pull requests for dependency updates. Actions are pinned by commit SHA and the base image by digest;
+# Dependabot updates the pins and their version comments. The plugin's lockfile (plugin/) is left out: it is
+# moved to each new vsp360-mcp release by its own pull request.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly

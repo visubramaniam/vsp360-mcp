@@ -63,29 +63,30 @@ All user questions live in [`tests/user-queries.md`](tests/user-queries.md): reg
 ## Safety: read-only by default
 
 By default only `GET` operations are allowed, plus a few `POST` operations that only query or validate:
-- analytics query
+- analytics query (only with `action=query`)
 - inventory filter query
 - authorization check
 - user capabilities
 - CSV validation
 - upgrade version validation
-- directory connection test
 
-All other operations are refused, and direct tools are not created for them. These include device registration and deletion, orchestration workflows (volume allocation, expansion, GAD), user and group changes, certificates, upgrades and notifications. To allow them, set `VSP360_ALLOW_WRITES=true`. `DELETE` tools are marked `destructiveHint`, so Claude asks for confirmation before running them.
+All other operations are refused, and direct tools are not created for them. These include device registration and deletion, the directory connection test (it makes VSP 360 connect to whatever LDAP host it's given), orchestration workflows (volume allocation, expansion, GAD), user and group changes, certificates, upgrades and notifications. To allow them, set `VSP360_ALLOW_WRITES=true`. `DELETE` tools are marked `destructiveHint`, so Claude asks for confirmation before running them.
 
-**Reads that return secrets.** One read, `vsp360GetServiceAccountSecret`, returns a service account's live client secret, which would then become part of the conversation. Every other read masks secrets. That read is refused, whether or not writes are allowed, unless `VSP360_ALLOW_SECRET_READS=true`.
+**Operations that return secrets.** Three operations return a live client secret, which would then become part of the conversation: the read `vsp360GetServiceAccountSecret`, and the writes `vsp360RevealBlockSSOSetup` and `vsp360RotateBlockSSOSecret`, which return a block storage SSO client secret. Every other operation masks secrets. These three are refused, whether or not writes are allowed, unless `VSP360_ALLOW_SECRET_READS=true`.
 
-**Local files.** Claude chooses `save_to` and upload paths, so text it reads from the API could try to steer them. `save_to` therefore only writes inside `VSP360_DOWNLOAD_DIR` and never overwrites a file (set `VSP360_SAVE_ANYWHERE=true` to lift the folder rule). Uploads refuse hidden files and folders such as `~/.ssh` or `.env`; set `VSP360_UPLOAD_DIR` to allow uploads only from one folder. In read-only mode, the one upload allowed (CSV validation) is refused unless `VSP360_UPLOAD_DIR` is set, because it would otherwise let a steered model send any local file to VSP 360.
+**Connections.** `VSP360_URL` must be `https://` unless `VSP360_ALLOW_HTTP=true`. The token request never follows a redirect, and API requests follow redirects only within `VSP360_URL`, so the client secret and access token aren't sent anywhere else.
+
+**Local files.** Claude chooses `save_to` and upload paths, so text it reads from the API could try to steer them. `save_to` therefore only writes inside `VSP360_DOWNLOAD_DIR`, checked with symlinks resolved, never into a hidden folder such as `~/.ssh`, and never over an existing file (set `VSP360_SAVE_ANYWHERE=true` to lift the folder rule). Uploads refuse hidden files and folders such as `~/.ssh` or `.env`; set `VSP360_UPLOAD_DIR` to allow uploads only from one folder. In read-only mode, the one upload allowed (CSV validation) is refused unless `VSP360_UPLOAD_DIR` is set, because it would otherwise let a steered model send any local file to VSP 360.
 
 ## Features
 
 - **Auth:** Gets an OAuth2 `client_credentials` token from `POST /api/v1/vsp360/auth/token`. It reuses the token until shortly before it expires and fetches a new one automatically after a 401.
-- **Pagination:** Use `limit` and `offset` (at most 100 per page), or set `all_pages: true` to fetch every page. When the first page's `Link` header gives both `next` and `last`, the remaining pages are fetched four at a time; otherwise the `next` links are followed one by one. `max_pages` caps the number of pages and defaults to 20. The `Content-Range` and `Link` headers are included in each result. If a later page is not JSON (for example a gateway error page), the pages before it are kept and a note says where it stopped.
+- **Pagination:** Use `limit` and `offset` (at most 100 per page), or set `all_pages: true` to fetch every page. When the first page's `Link` header gives both `next` and `last`, the remaining pages are fetched four at a time; otherwise the `next` links are followed one by one. `max_pages` caps the number of pages; it defaults to 20, and at most 200 are fetched. The `Content-Range` and `Link` headers are included in each result. If a later page is not JSON (for example a gateway error page), the pages before it are kept and a note says where it stopped.
 - **Downloads:** Binary responses are streamed to `VSP360_DOWNLOAD_DIR`, so large bundles never sit in memory, and the file path is returned. These include diagnostic bundles (`.tar.gz`), CSR ZIPs and billing reports. A name the server already used gets a numbered suffix. Any call can also pass `save_to: "report.json"` (a file name or a path inside the download folder); with `all_pages`, every page is saved.
 - **Uploads:** Multipart operations take local file paths, for example `files: {"file": "~/devices.csv"}`. This applies to installing a TLS certificate, validating a bulk-registration CSV, and uploading an upgrade package. Files are streamed from disk, so 20 GB `.zst` upgrade packages don't need to fit in memory. Hidden files are refused (see [Safety](#safety-read-only-by-default)).
 - **TLS:** Use `VSP360_CA_CERT` for a private CA. Use `VSP360_INSECURE_TLS=true` only for lab systems with self-signed certificates.
 - **Compact responses:** JSON responses and `vsp360_describe_operation` output are returned without indentation, which is about 40% fewer characters for the model to read. Files written with `save_to` stay indented.
-- **Large responses:** Responses longer than `VSP360_MAX_RESPONSE_CHARS` are truncated, with a note telling Claude how to narrow the request.
+- **Large responses:** Responses longer than `VSP360_MAX_RESPONSE_CHARS` are truncated, with a note telling Claude how to narrow the request. A response larger than `VSP360_MAX_RESPONSE_BYTES` (64 MiB) isn't read into memory: the call fails and suggests `save_to`, which streams the response to a file. With `all_pages`, the limit covers all pages together, and the pages before it are kept.
 
 ## Improving search: logging and the learned hint
 
@@ -187,12 +188,14 @@ To try the tools interactively, run `npm run inspect`. It opens the MCP Inspecto
 | `VSP360_CLIENT_SECRET` | *(required)* | Service account client secret |
 | `VSP360_SCOPE` | | Optional OAuth scope |
 | `VSP360_ALLOW_WRITES` | `false` | Allow operations that change state |
-| `VSP360_ALLOW_SECRET_READS` | `false` | Allow `vsp360GetServiceAccountSecret`, which returns a live client secret |
+| `VSP360_ALLOW_SECRET_READS` | `false` | Allow the three operations that return a live client secret (see [Safety](#safety-read-only-by-default)) |
 | `VSP360_TOOLSETS` | *(none)* | Comma-separated API areas (tags) to expose as direct tools. `all` exposes all 264, which is not recommended. |
 | `VSP360_CA_CERT` | | PEM file of the CA that signed the VSP 360 certificate |
 | `VSP360_INSECURE_TLS` | `false` | Skip TLS verification (lab use only) |
+| `VSP360_ALLOW_HTTP` | `false` | Allow an `http://` `VSP360_URL`, which sends the client secret and tokens unencrypted |
 | `VSP360_TIMEOUT_MS` | `120000` | Request timeout; uploads are exempt |
 | `VSP360_MAX_RESPONSE_CHARS` | `60000` | Truncation limit for text responses |
+| `VSP360_MAX_RESPONSE_BYTES` | `67108864` (64 MiB) | Most bytes read into memory from one response, or from all pages of an `all_pages` call; `save_to` downloads are streamed and not limited |
 | `VSP360_DOWNLOAD_DIR` | `~/Downloads/vsp360-mcp` | Where binary downloads and `save_to` files are written |
 | `VSP360_SAVE_ANYWHERE` | `false` | Let `save_to` write outside `VSP360_DOWNLOAD_DIR` |
 | `VSP360_UPLOAD_DIR` | *(any non-hidden path)* | Only allow uploads from inside this folder. In read-only mode, uploads are refused unless it's set. |

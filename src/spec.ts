@@ -29,8 +29,10 @@ export interface Operation {
   successContentTypes: string[];
   readOnly: boolean;
   destructive: boolean;
-  /** A read that returns a credential in clear text; refused unless VSP360_ALLOW_SECRET_READS=true. */
+  /** Returns a credential in clear text; refused unless VSP360_ALLOW_SECRET_READS=true. */
   secret: boolean;
+  /** Parameter values the operation is read-only with; in read-only mode, any other value is refused. */
+  readOnlyParams?: Record<string, string>;
 }
 
 const METHODS = ["get", "post", "put", "patch", "delete"];
@@ -46,11 +48,18 @@ const READ_ONLY_POSTS = new Set([
   "vsp360GetUserCapabilities",
   "vsp360PostDevicesEnrollmentTemplateValidate",
   "vsp360PostUpgradesValidate",
-  "vsp360VerifyDirectory",
 ]);
+// vsp360VerifyDirectory changes nothing either, but it makes VSP 360 connect to any LDAP host with the bind
+// credentials it is given, so it is treated as a write.
 
-// Reads that return a live credential. Every other read masks secrets, per the spec.
-const SECRET_READS = new Set(["vsp360GetServiceAccountSecret"]);
+// Read-only POSTs that are only reads with these parameter values: analyticsRunQuery's other actions can, for
+// example, abort other users' queries.
+const READ_ONLY_PARAMS: Record<string, Record<string, string>> = {
+  analyticsRunQuery: { action: "query" },
+};
+
+// Operations that return a live credential. Every other operation masks secrets, per the spec.
+const SECRETS = new Set(["vsp360GetServiceAccountSecret", "vsp360RevealBlockSSOSetup", "vsp360RotateBlockSSOSecret"]);
 
 /**
  * Pre-parsed copy of the bundled YAML spec, written by `npm run build` (scripts/cache-spec.mjs) as
@@ -165,7 +174,8 @@ export class Spec {
       successContentTypes: [...successContentTypes],
       readOnly,
       destructive: method === "delete",
-      secret: SECRET_READS.has(op.operationId),
+      secret: SECRETS.has(op.operationId),
+      ...(READ_ONLY_PARAMS[op.operationId] ? { readOnlyParams: READ_ONLY_PARAMS[op.operationId] } : {}),
     };
   }
 

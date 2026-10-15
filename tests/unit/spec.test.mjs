@@ -9,10 +9,14 @@ import { Spec, SPEC_CACHE, parseYaml, toolParamName } from "../../dist/spec.js";
 const SPEC_FILE = new URL("../../spec/Platform-vsp360-openapi.yaml", import.meta.url).pathname;
 const spec = new Spec(SPEC_FILE);
 
-test("indexes 264 operations, hides the token endpoint, and flags exactly one secret read", () => {
+test("indexes 264 operations, hides the token endpoint, and flags the three that return a secret", () => {
   assert.equal(spec.operations.size, 264);
   assert.ok(!spec.operations.has("vsp360PostAuthToken"));
-  assert.deepEqual([...spec.operations.values()].filter((o) => o.secret).map((o) => o.operationId), ["vsp360GetServiceAccountSecret"]);
+  assert.deepEqual([...spec.operations.values()].filter((o) => o.secret).map((o) => o.operationId).sort(), [
+    "vsp360GetServiceAccountSecret",
+    "vsp360RevealBlockSSOSetup",
+    "vsp360RotateBlockSSOSecret",
+  ]);
 });
 
 test("read-only operations are GETs plus the listed query/validate POSTs", () => {
@@ -21,8 +25,11 @@ test("read-only operations are GETs plus the listed query/validate POSTs", () =>
     if (["PUT", "PATCH", "DELETE"].includes(op.method)) assert.ok(!op.readOnly, op.operationId);
   }
   const readOnlyPosts = [...spec.operations.values()].filter((o) => o.method === "POST" && o.readOnly).map((o) => o.operationId).sort();
-  assert.equal(readOnlyPosts.length, 7);
+  assert.equal(readOnlyPosts.length, 6);
   assert.ok(readOnlyPosts.includes("analyticsRunQuery"));
+  assert.deepEqual(spec.operations.get("analyticsRunQuery").readOnlyParams, { action: "query" });
+  // It makes VSP 360 connect to any LDAP host it is given (SECURITY.md S4).
+  assert.ok(!spec.operations.get("vsp360VerifyDirectory").readOnly);
 });
 
 test("every operation has a response schema available after the document is released", () => {

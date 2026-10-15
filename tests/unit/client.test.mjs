@@ -2,7 +2,7 @@
 // Run with `npm test` (builds first), or `node --test tests/unit/` after `npm run build`.
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, readFileSync, existsSync, readdirSync, rmSync, mkdirSync } from "node:fs";
+import { mkdtempSync, writeFileSync, readFileSync, existsSync, readdirSync, rmSync, mkdirSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { MockAgent } from "undici";
@@ -202,6 +202,26 @@ test("save_to is confined to the download folder and never overwrites", async ()
   assert.match(again.text, /already exists/);
 });
 
+test("save_to can't leave the download folder through a symlink, or write into a hidden folder (SECURITY.md S7)", async () => {
+  tokens();
+  pool.intercept({ path: "/api/v1/vsp360/about", method: "GET" }).reply(200, "{}", json()).times(3);
+  mkdirSync(join(dir, "downloads"), { recursive: true });
+  mkdirSync(join(dir, "outside"));
+  symlinkSync(join(dir, "outside"), join(dir, "downloads", "link"), "dir");
+  const viaLink = await client.call(op("vsp360GetAbout"), { save_to: "link/about.json" });
+  assert.equal(viaLink.ok, false);
+  assert.match(viaLink.text, /outside the download folder/);
+  assert.ok(!existsSync(join(dir, "outside", "about.json")));
+  const hidden = await client.call(op("vsp360GetAbout"), { save_to: ".config/about.json" });
+  assert.equal(hidden.ok, false);
+  assert.match(hidden.text, /hidden/);
+
+  client = makeClient({ VSP360_SAVE_ANYWHERE: "true" });
+  const anywhereHidden = await client.call(op("vsp360GetAbout"), { save_to: join(dir, ".ssh", "authorized_keys") });
+  assert.equal(anywhereHidden.ok, false);
+  assert.match(anywhereHidden.text, /hidden/);
+});
+
 test("VSP360_SAVE_ANYWHERE lifts the folder restriction", async () => {
   client = makeClient({ VSP360_SAVE_ANYWHERE: "true" });
   tokens();
@@ -248,4 +268,66 @@ test("uploads refuse hidden paths, and paths outside VSP360_UPLOAD_DIR when it i
   pool.intercept({ path: "/api/v1/vsp360/devices/enrollment-template/validate?deviceType=block", method: "POST" }).reply(200, '{"valid":true}', json());
   const inside = await client.call(op("vsp360PostDevicesEnrollmentTemplateValidate"), { params: { deviceType: "block" }, files: { file: join(uploads, "devices.csv") } });
   assert.ok(inside.ok, inside.text);
+});
+
+test("the token request never follows a redirect (SECURITY.md S3)", async () => {
+  pool.intercept({ path: "/api/v1/vsp360/auth/token", method: "POST" }).reply(307, "", { headers: { location: "https://evil.test/token" } });
+  await assert.rejects(client.call(op("vsp360GetAbout"), {}), /Token request was redirected \(HTTP 307 to https:\/\/evil\.test\/token\)/);
+});
+
+test("API redirects are followed within VSP360_URL only (SECURITY.md S3)", async () => {
+  tokens();
+  pool.intercept({ path: "/api/v1/vsp360/about", method: "GET" }).reply(302, "", { headers: { location: "/api/v1/vsp360/about2" } });
+  pool.intercept({ path: "/api/v1/vsp360/about2", method: "GET" }).reply(200, '{"moved":true}', json());
+  const same = await client.call(op("vsp360GetAbout"), {});
+  assert.ok(same.ok, same.text);
+  assert.match(same.text, /moved/);
+
+  pool.intercept({ path: "/api/v1/vsp360/about", method: "GET" }).reply(302, "", { headers: { location: "https://evil.test/collect" } });
+  const other = await client.call(op("vsp360GetAbout"), {});
+  assert.equal(other.ok, false);
+  assert.match(other.text, /Redirect refused.*https:\/\/evil\.test/);
+});
+
+test(". and .. and slashes are refused as path parameter values (SECURITY.md S8)", async () => {
+  for (const id of [".", "..", "a/../b", "a\\b"]) {
+    const r = await client.call(op("vsp360GetDiagnosticsJobsByIdDownload"), { params: { id } });
+    assert.equal(r.ok, false, id);
+    assert.match(r.text, /Invalid value for path parameter "id"/, id);
+  }
+});
+
+test("responses over VSP360_MAX_RESPONSE_BYTES are refused, and all_pages stops at the limit (SECURITY.md S9)", async () => {
+  client = makeClient({ VSP360_MAX_RESPONSE_BYTES: "1000" });
+  tokens();
+  const big = JSON.stringify(Array.from({ length: 200 }, (_, i) => ({ id: i })));
+  pool.intercept({ path: "/api/v1/vsp360/about", method: "GET" }).reply(200, big, json());
+  const one = await client.call(op("vsp360GetAbout"), {});
+  assert.equal(one.ok, false);
+  assert.match(one.text, /larger than VSP360_MAX_RESPONSE_BYTES \(1000 bytes\)/);
+
+  const page = JSON.stringify(Array.from({ length: 20 }, (_, i) => ({ id: i }))); // about 180 bytes
+  pool.intercept({ path: (p) => p.startsWith("/api/v1/vsp360/users"), method: "GET" }).reply(200, page, json(null, { link: '<https://vsp.test/api/v1/vsp360/users?next=1>; rel="next"' })).persist();
+  const paged = await client.call(op("vsp360ListIdentityUsers"), { all_pages: true, max_pages: 50 });
+  assert.ok(paged.ok, paged.text);
+  assert.match(paged.text, /Stopped at page \d+: the pages reached VSP360_MAX_RESPONSE_BYTES/);
+});
+
+test("max_pages is capped at 200 (SECURITY.md S9)", async () => {
+  tokens();
+  let served = 0;
+  pool.intercept({ path: (p) => p.startsWith("/api/v1/vsp360/users"), method: "GET" }).reply(() => {
+    served++;
+    return { statusCode: 200, data: "[1]", responseOptions: json(null, { link: `<https://vsp.test/api/v1/vsp360/users?next=${served}>; rel="next"` }) };
+  }).persist();
+  const r = await client.call(op("vsp360ListIdentityUsers"), { all_pages: true, max_pages: 100000 });
+  assert.match(r.text, /Stopped after 200 pages/);
+  assert.equal(served, 200);
+});
+
+test("an http:// VSP360_URL is refused unless VSP360_ALLOW_HTTP=true (SECURITY.md S10)", () => {
+  const env = { VSP360_URL: "http://vsp.test", VSP360_CLIENT_ID: "id", VSP360_CLIENT_SECRET: "secret" };
+  assert.throws(() => loadConfig(env), /http:\/\/.*VSP360_ALLOW_HTTP=true/);
+  assert.equal(loadConfig({ ...env, VSP360_ALLOW_HTTP: "true" }).baseUrl, "http://vsp.test");
+  assert.throws(() => loadConfig({ ...env, VSP360_URL: "ftp://vsp.test" }), /must be an https:\/\/ URL/);
 });
