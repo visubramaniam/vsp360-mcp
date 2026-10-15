@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Plugin listing icon** (`plugin/.claude-plugin/icon.png`): a neutral storage-and-chat icon for the `vsp360-community` listing in Anthropic's plugin directory, with no Hitachi branding.
+
 ## 0.1.20 — 2026-10-15
 
 ### Fixed
