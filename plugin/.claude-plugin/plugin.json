@@ -11,7 +11,8 @@
   "repository": "https://github.com/visubramaniam/vsp360-mcp",
   "license": "MIT",
   "keywords": ["hitachi", "vsp360", "storage", "san", "capacity", "performance"],
-  "documentationUrl": "https://github.com/visubramaniam/vsp360-mcp/blob/main/INSTALL.md",
+  "documentationUrl": "https://github.com/visubramaniam/vsp360-mcp/blob/main/README.plugin.md",
+  "privacyPolicyUrl": "https://github.com/visubramaniam/vsp360-mcp/blob/main/README.plugin.md#privacy",
   "supportUrl": "https://github.com/visubramaniam/vsp360-mcp/issues",
   "mcpServers": {
     "vsp360": {

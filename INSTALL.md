@@ -120,6 +120,8 @@ The [`plugin/`](https://github.com/visubramaniam/vsp360-mcp/tree/main/plugin) fo
 
 Claude Code asks for the VSP 360 URL, client ID and secret, and stores the secret in your system's secure credential store. The plugin works in Claude Code and in Cowork sessions on your computer. Claude Desktop **chat** doesn't run plugins' local servers, so use the [extension](#claude-desktop-extension-mcpb) there.
 
+[README.plugin.md](README.plugin.md) covers the plugin in full: settings, the skills, updating, troubleshooting and privacy.
+
 ## npm package
 
 The package is published on the npm registry as [`vsp360-mcp`](https://www.npmjs.com/package/vsp360-mcp), starting with version 0.1.17. It needs Node.js 20 or later.

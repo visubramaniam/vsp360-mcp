@@ -67,7 +67,9 @@ See [SECURITY.md](https://github.com/visubramaniam/vsp360-mcp/blob/main/SECURITY
 
 ## Documentation and support
 
-- Installation and configuration: [INSTALL.md](https://github.com/visubramaniam/vsp360-mcp/blob/main/INSTALL.md) and the [wiki](https://github.com/visubramaniam/vsp360-mcp/wiki)
+- Installing, configuring and using the plugin: [README.plugin.md](https://github.com/visubramaniam/vsp360-mcp/blob/main/README.plugin.md)
+- Privacy: [README.plugin.md#privacy](https://github.com/visubramaniam/vsp360-mcp/blob/main/README.plugin.md#privacy)
+- The server itself: [INSTALL.md](https://github.com/visubramaniam/vsp360-mcp/blob/main/INSTALL.md) and the [wiki](https://github.com/visubramaniam/vsp360-mcp/wiki)
 - Questions and bugs: [GitHub issues](https://github.com/visubramaniam/vsp360-mcp/issues)
 
 ## License

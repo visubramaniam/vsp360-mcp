@@ -8,6 +8,7 @@
 
 ### Added
 
+- **README.plugin.md**, a guide to installing, configuring and using the vsp360-community plugin, with its privacy statement. The plugin's listing now links to it for documentation (`documentationUrl`) and privacy (`privacyPolicyUrl`).
 - **Plugin listing icon** (`plugin/.claude-plugin/icon.png`): a neutral storage-and-chat icon for the `vsp360-community` listing in Anthropic's plugin directory, with no Hitachi branding.
 
 ## 0.1.20 — 2026-10-15
