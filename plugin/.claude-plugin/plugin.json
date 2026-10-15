@@ -1,7 +1,7 @@
 {
   "name": "vsp360-community",
   "displayName": "Hitachi VSP 360 (Community)",
-  "version": "0.1.21",
+  "version": "0.1.22",
   "description": "Community MCP server for Hitachi VSP 360: query alerts, inventory, capacity and performance through the VSP 360 REST API. Read-only by default. Not an official Hitachi Vantara product.",
   "author": {
     "name": "Vinod Subramaniam",

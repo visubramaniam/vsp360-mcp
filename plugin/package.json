@@ -1,10 +1,10 @@
 {
   "name": "vsp360-community-plugin",
-  "version": "0.1.21",
+  "version": "0.1.22",
   "private": true,
   "description": "Dependencies of the vsp360-community Claude plugin: the vsp360-mcp server, installed by Claude Code from package-lock.json.",
   "license": "MIT",
   "dependencies": {
-    "vsp360-mcp": "0.1.21"
+    "vsp360-mcp": "0.1.22"
   }
 }
