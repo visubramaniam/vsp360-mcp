@@ -4,6 +4,7 @@
 
 ### Changed
 
+- **Faster startup, less memory.** `npm run build` now writes a pre-parsed JSON copy of the bundled spec (`dist/openapi-cache.json`), and the server uses it instead of parsing the 2 MB YAML file at every start. On an Apple-silicon Mac, time to ready fell from about 540 ms to 270 ms, and peak memory from about 290 MB to 115 MB. The copy is keyed by the YAML file's SHA-256, so replacing the YAML file still takes effect at once. `VSP360_SPEC` also accepts a JSON file now.
 - **Fewer turns for clear requests.** When a search has HIGH confidence, the top result's parameters are listed with the results (types, enum values, required body fields), so Claude can usually call it without a separate `vsp360_describe_operation`. It's skipped for operations blocked by the current settings and for `analyticsRunQuery`.
 - **Compact JSON.** Responses and `describe` output are no longer indented; `describe` output for all 264 operations is 43% smaller. Files written with `save_to` stay indented.
 - **Parallel pagination.** With `all_pages`, when the first page's `Link` header names both `next` and `last` and they differ only in `offset`, the remaining pages are fetched four at a time instead of one after another. Pages stay in order, `max_pages` still applies, and other APIs still follow `next` links in turn.

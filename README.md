@@ -195,7 +195,7 @@ To try the tools interactively, run `npm run inspect`. It opens the MCP Inspecto
 | `VSP360_PATH_REWRITES` | `/api/v1/protection=/dataprotection/api/v1/protection` | Path prefixes to rewrite, as comma-separated `/from=/to` pairs. The Data Protection service's pagination (`next`) links leave out its `/dataprotection` gateway prefix; the default puts it back. It also lets older specs without the prefix work. |
 | `VSP360_ANALYTICS_FIELDS` | bundled `spec/analytics-fields.json` | MQL resource types and attributes added to `analyticsRunQuery`'s description. |
 | `VSP360_EXAMPLES` | bundled `spec/examples.json` | Example user questions per operation, used to rank search results. Set to an empty string to turn them off. |
-| `VSP360_SPEC` | bundled spec | Path to a different OpenAPI file, e.g. a newer VSP 360 release |
+| `VSP360_SPEC` | bundled spec | Path to a different OpenAPI file, YAML or JSON, e.g. a newer VSP 360 release. JSON loads faster. |
 
 These settings belong to the optional search-improvement tools ([Improving search](#improving-search-logging-and-the-learned-hint)); none is needed to use the server:
 
@@ -220,7 +220,7 @@ The [Release workflow](.github/workflows/release.yml) runs when a `v*` tag is pu
 
 ## Updating for a new VSP 360 release
 
-Replace `spec/Platform-vsp360-openapi.yaml` (or point `VSP360_SPEC` at the new file) and restart the server. No code is generated from the spec, so nothing needs rebuilding. If the new release adds `POST` operations that only read data, add them to `READ_ONLY_POSTS` in `src/spec.ts`.
+Replace `spec/Platform-vsp360-openapi.yaml` (or point `VSP360_SPEC` at the new file) and restart the server. No code is generated from the spec, so nothing needs rebuilding. `npm run build` keeps a pre-parsed copy of the bundled spec in `dist/openapi-cache.json`, so the server starts without parsing YAML. The copy is only used while the YAML file is unchanged, so a replaced file is parsed afresh, which adds about a quarter of a second to startup. Run `npm run build` again to refresh the copy. If the new release adds `POST` operations that only read data, add them to `READ_ONLY_POSTS` in `src/spec.ts`.
 
 ## License
 
