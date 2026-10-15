@@ -1,8 +1,10 @@
-# vsp360-mcp
+# vsp360-mcp: Community MCP server for Hitachi VSP 360
 
 [![npm](https://img.shields.io/npm/v/vsp360-mcp)](https://www.npmjs.com/package/vsp360-mcp) [![Release](https://github.com/visubramaniam/vsp360-mcp/actions/workflows/release.yml/badge.svg)](https://github.com/visubramaniam/vsp360-mcp/actions/workflows/release.yml)
 
 An MCP server for the **Hitachi VSP 360 1.4 REST API**, built from the Platform OpenAPI spec `spec/Platform-vsp360-openapi.yaml`. It gives Claude (or any other MCP client) access to all 264 API operations. The token endpoint is excluded because the server handles authentication itself.
+
+> Not an official Hitachi Vantara product: vsp360-mcp is an independent, community project, and isn't supported by or affiliated with Hitachi Vantara. Hitachi and VSP 360 are trademarks of their owners.
 
 ## How it exposes the API
 
