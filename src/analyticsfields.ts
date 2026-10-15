@@ -1,7 +1,7 @@
 // MQL field reference for analyticsRunQuery: resource types, their attribute IDs and relations, from
 // spec/analytics-fields.json. The spec documents the query endpoint but not what can be queried, so without
 // this Claude guesses field names (e.g. port speed, host-group WWNs) and burns calls on empty results.
-import { existsSync, readFileSync } from "node:fs";
+import { loadOptionalJson } from "./config.js";
 
 interface FieldType { device: string; source: "guide" | "observed"; config: string[]; metrics: string[]; relations: string[]; synthetic?: string[] }
 
@@ -24,7 +24,7 @@ export class AnalyticsFields {
   private readonly types: Record<string, FieldType>;
 
   constructor(path: string) {
-    this.types = existsSync(path) ? JSON.parse(readFileSync(path, "utf8")).types : {};
+    this.types = loadOptionalJson<{ types: Record<string, FieldType> }>(path, "MQL field reference", { types: {} }).types;
   }
 
   get loaded(): boolean {

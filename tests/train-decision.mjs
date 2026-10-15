@@ -8,7 +8,7 @@
 // --write saves the model to spec/decision-model.json.
 import { readFileSync, writeFileSync } from "node:fs";
 import { Spec } from "../dist/spec.js";
-import { OperationIndex, analyticsHint } from "../dist/search.js";
+import { OperationIndex, hintFor } from "../dist/search.js";
 import { FEATURES, DECISIONS, features, predict } from "../dist/decision.js";
 import { CASES, HELD_OUT, HELD_OUT_2, USER_QUESTIONS } from "./cases.mjs";
 
@@ -35,7 +35,7 @@ function thresholds(s, hint) {
 
 function row(question, want, source) {
   const s = index.search(question, { limit: 10 });
-  const hint = s.confidence !== "high" && !!analyticsHint(question);
+  const hint = !!hintFor(question, s);
   const ids = s.hits.map((h) => h.op.operationId);
   return { question, source, x: features(question, s, hint), y: gold(want, ids), base: thresholds(s, hint), top1: ids[0] };
 }

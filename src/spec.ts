@@ -27,6 +27,8 @@ export interface Operation {
   successContentTypes: string[];
   readOnly: boolean;
   destructive: boolean;
+  /** A read that returns a credential in clear text; refused unless VSP360_ALLOW_SECRET_READS=true. */
+  secret: boolean;
 }
 
 const METHODS = ["get", "post", "put", "patch", "delete"];
@@ -45,10 +47,15 @@ const READ_ONLY_POSTS = new Set([
   "vsp360VerifyDirectory",
 ]);
 
+// Reads that return a live credential. Every other read masks secrets, per the spec.
+const SECRET_READS = new Set(["vsp360GetServiceAccountSecret"]);
+
 export class Spec {
-  readonly doc: Json;
   readonly operations = new Map<string, Operation>();
   readonly tags: { name: string; description: string; count: number }[] = [];
+  private readonly responses = new Map<string, Json>();
+  // The parsed document is only needed while indexing; it is released afterwards (about 100 MB of heap).
+  private doc: Json;
 
   constructor(file: string) {
     this.doc = parse(readFileSync(file, "utf8"), { maxAliasCount: -1 });
@@ -57,6 +64,7 @@ export class Spec {
         const op = item[method];
         if (!op || HIDDEN.has(op.operationId)) continue;
         this.operations.set(op.operationId, this.buildOperation(method, path, item, op));
+        this.responses.set(op.operationId, this.buildResponseSchema(op));
       }
     }
     const counts = new Map<string, number>();
@@ -67,6 +75,7 @@ export class Spec {
     for (const [name, count] of counts) {
       if (!this.tags.some((t) => t.name === name)) this.tags.push({ name, description: "", count });
     }
+    this.doc = undefined;
   }
 
   private buildOperation(method: string, path: string, item: Json, op: Json): Operation {
@@ -117,11 +126,12 @@ export class Spec {
       successContentTypes: [...successContentTypes],
       readOnly,
       destructive: method === "delete",
+      secret: SECRET_READS.has(op.operationId),
     };
   }
 
   /** Follows a single local $ref. */
-  ref(node: Json): Json {
+  private ref(node: Json): Json {
     let cur = node;
     for (let i = 0; cur && cur.$ref && i < 10; i++) cur = this.lookup(cur.$ref);
     return cur;
@@ -141,7 +151,7 @@ export class Spec {
    * are cut off at the point of recursion, and examples are dropped to keep
    * tool definitions small.
    */
-  resolve(schema: Json, maxDepth = 12, seen: string[] = []): Json {
+  private resolve(schema: Json, maxDepth = 12, seen: string[] = []): Json {
     if (Array.isArray(schema)) return schema.map((s) => this.resolve(s, maxDepth, seen));
     if (!schema || typeof schema !== "object") return schema;
     if (schema.$ref) {
@@ -168,7 +178,10 @@ export class Spec {
 
   /** Full 2xx response schema, for describe_operation. */
   responseSchema(op: Operation): Json {
-    const raw = this.doc.paths[op.path][op.method.toLowerCase()];
+    return this.responses.get(op.operationId);
+  }
+
+  private buildResponseSchema(raw: Json): Json {
     for (const [code, r] of Object.entries<Json>(raw.responses ?? {})) {
       if (!code.startsWith("2")) continue;
       const content = this.ref(r).content ?? {};

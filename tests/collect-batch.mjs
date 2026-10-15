@@ -62,12 +62,9 @@ if (!part || !parts.some((p) => p.startsWith(`Part ${part}:`))) {
 const testSplit = loadTestSplit(file);
 const questions = all.filter((q) => q.part === part).map((q) => ({ n: q.n, section: q.section, text: q.question }));
 const partTitle = all.find((q) => q.part === part).partTitle;
-// State is { files: { "<key>": { done: { "<n>": "ok" } } } }, keyed "part-N". Earlier versions keyed it by the
-// separate question files; those entries carry over to the parts that replaced them.
-const saved = existsSync(STATE) ? JSON.parse(readFileSync(STATE, "utf8")) : {};
-const allState = saved.files ? saved : { files: saved.done ? { "user-questions-new.txt": { done: saved.done } } : {} };
-const OLD_KEYS = { 3: "user-questions-new.txt", 4: "user-questions-batch.txt" };
-if (!allState.files[`part-${part}`] && allState.files[OLD_KEYS[part]]) allState.files[`part-${part}`] = allState.files[OLD_KEYS[part]];
+// State is { files: { "part-N": { done: { "<n>": "ok" } } } }.
+const allState = existsSync(STATE) ? JSON.parse(readFileSync(STATE, "utf8")) : { files: {} };
+allState.files ??= {};
 const state = (allState.files[`part-${part}`] ??= { done: {} });
 const todo = questions.filter((q) => !state.done[q.n] && !testSplit.has(norm(q.text)) && (!only || only.includes(q.n)));
 const skippedTest = questions.filter((q) => testSplit.has(norm(q.text)));

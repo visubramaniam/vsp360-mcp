@@ -18,7 +18,8 @@
     "eval": "npm run build && node tests/search-eval.mjs",
     "decision-report": "node tests/decision-report.mjs",
     "collect-batch": "node tests/collect-batch.mjs",
-    "train-decision": "node tests/train-decision.mjs"
+    "train-decision": "node tests/train-decision.mjs",
+    "test": "npm run build && node --test \"tests/unit/*.test.mjs\" && node tests/search-eval.mjs"
   },
   "engines": {
     "node": ">=20"

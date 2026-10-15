@@ -54,7 +54,7 @@ The spec documents the Analytics query endpoint but not what it can query. Descr
 All user questions live in [`tests/user-queries.md`](tests/user-queries.md): regression prompts, labelled questions for evaluation and training, and batch questions for data collection.
 
 
-`npm run eval` scores the search against 83 labelled development requests (45 held out from tuning) and the 119 labelled user questions in `tests/user-queries.md` (79 held out); `EXAMPLES=0 npm run eval` measures it without the example questions.
+`npm test` builds the server, runs the unit tests in `tests/unit/` (the HTTP client against a mock server, the spec loader, and the MCP server end to end, including the read-only block) and then the search evaluation, which fails if any score drops below its threshold. `npm run eval` scores the search against 83 labelled development requests (45 held out from tuning) and the 119 labelled user questions in `tests/user-queries.md` (79 held out); `EXAMPLES=0 npm run eval` measures it without the example questions.
 
 ## Safety: read-only by default
 
@@ -69,12 +69,16 @@ By default only `GET` operations are allowed, plus a few `POST` operations that 
 
 All other operations are refused, and direct tools are not created for them. These include device registration and deletion, orchestration workflows (volume allocation, GAD, NDM), user and group changes, certificates, upgrades and notifications. To allow them, set `VSP360_ALLOW_WRITES=true`. `DELETE` tools are marked `destructiveHint`, so Claude asks for confirmation before running them.
 
+**Reads that return secrets.** One read, `vsp360GetServiceAccountSecret`, returns a service account's live client secret, which would then become part of the conversation. Every other read masks secrets. That read is refused, whether or not writes are allowed, unless `VSP360_ALLOW_SECRET_READS=true`.
+
+**Local files.** Claude chooses `save_to` and upload paths, so text it reads from the API could try to steer them. `save_to` therefore only writes inside `VSP360_DOWNLOAD_DIR` and never overwrites a file (set `VSP360_SAVE_ANYWHERE=true` to lift the folder rule). Uploads refuse hidden files and folders such as `~/.ssh` or `.env`; set `VSP360_UPLOAD_DIR` to allow uploads only from one folder.
+
 ## Features
 
 - **Auth:** Gets an OAuth2 `client_credentials` token from `POST /api/v1/vsp360/auth/token`. It reuses the token until shortly before it expires and fetches a new one automatically after a 401.
-- **Pagination:** Use `limit` and `offset` (at most 100 per page), or set `all_pages: true` to follow the RFC 8288 `next` links. `max_pages` caps the number of pages and defaults to 20. The `Content-Range` and `Link` headers are included in each result.
-- **Downloads:** Binary responses are saved to `VSP360_DOWNLOAD_DIR`, and the file path is returned. These include diagnostic bundles (`.tar.gz`), CSR ZIPs and billing reports. Any call can also pass `save_to: "/path/file"`.
-- **Uploads:** Multipart operations take local file paths, for example `files: {"file": "~/devices.csv"}`. This applies to installing a TLS certificate, validating a bulk-registration CSV, and uploading an upgrade package. Files are streamed from disk, so 20 GB `.zst` upgrade packages don't need to fit in memory.
+- **Pagination:** Use `limit` and `offset` (at most 100 per page), or set `all_pages: true` to follow the RFC 8288 `next` links. `max_pages` caps the number of pages and defaults to 20. The `Content-Range` and `Link` headers are included in each result. If a later page is not JSON (for example a gateway error page), the pages before it are kept and a note says where it stopped.
+- **Downloads:** Binary responses are streamed to `VSP360_DOWNLOAD_DIR`, so large bundles never sit in memory, and the file path is returned. These include diagnostic bundles (`.tar.gz`), CSR ZIPs and billing reports. A name the server already used gets a numbered suffix. Any call can also pass `save_to: "report.json"` (a file name or a path inside the download folder); with `all_pages`, every page is saved.
+- **Uploads:** Multipart operations take local file paths, for example `files: {"file": "~/devices.csv"}`. This applies to installing a TLS certificate, validating a bulk-registration CSV, and uploading an upgrade package. Files are streamed from disk, so 20 GB `.zst` upgrade packages don't need to fit in memory. Hidden files are refused (see [Safety](#safety-read-only-by-default)).
 - **TLS:** Use `VSP360_CA_CERT` for a private CA. Use `VSP360_INSECURE_TLS=true` only for lab systems with self-signed certificates.
 - **Large responses:** Responses longer than `VSP360_MAX_RESPONSE_CHARS` are truncated, with a note telling Claude how to narrow the request.
 
@@ -158,21 +162,30 @@ To try the tools interactively, run `npm run inspect`. It opens the MCP Inspecto
 | `VSP360_CLIENT_SECRET` | *(required)* | Service account client secret |
 | `VSP360_SCOPE` | | Optional OAuth scope |
 | `VSP360_ALLOW_WRITES` | `false` | Allow operations that change state |
+| `VSP360_ALLOW_SECRET_READS` | `false` | Allow `vsp360GetServiceAccountSecret`, which returns a live client secret |
 | `VSP360_TOOLSETS` | *(none)* | Comma-separated API areas (tags) to expose as direct tools. `all` exposes all 264, which is not recommended. |
 | `VSP360_CA_CERT` | | PEM file of the CA that signed the VSP 360 certificate |
 | `VSP360_INSECURE_TLS` | `false` | Skip TLS verification (lab use only) |
 | `VSP360_TIMEOUT_MS` | `120000` | Request timeout; uploads are exempt |
 | `VSP360_MAX_RESPONSE_CHARS` | `60000` | Truncation limit for text responses |
-| `VSP360_DOWNLOAD_DIR` | `~/Downloads/vsp360-mcp` | Where binary downloads are saved |
+| `VSP360_DOWNLOAD_DIR` | `~/Downloads/vsp360-mcp` | Where binary downloads and `save_to` files are written |
+| `VSP360_SAVE_ANYWHERE` | `false` | Let `save_to` write outside `VSP360_DOWNLOAD_DIR` |
+| `VSP360_UPLOAD_DIR` | *(any non-hidden path)* | Only allow uploads from inside this folder |
 | `VSP360_PATH_REWRITES` | `/api/v1/protection=/dataprotection/api/v1/protection` | Gateway prefixes the spec leaves out, as comma-separated `/from=/to` pairs. The default makes the Data Protection operations reach `/dataprotection/...`. |
-| `VSP360_DECISION_LOG` | *(off)* | Path to a JSON Lines file. When set, each search, describe and call is logged locally (see [Decision log](#decision-log)). |
-| `VSP360_DECISION_COLLECT` | `false` | `true` turns on collection mode (needs `VSP360_DECISION_LOG`); see [Decision log](#decision-log). |
-| `VSP360_DECISION_COLLECT_SECONDS` | `600` | In collection mode, how long a search result keeps its operations callable. |
-| `VSP360_DECISION_HINT` | `false` | `true` adds the learned model's suggested next step to search results; `ab` does so in a random half of sessions. |
-| `VSP360_DECISION_LINK_SECONDS` | `120` | A describe or call is tied to the latest search only if it starts within this many seconds of it. |
 | `VSP360_ANALYTICS_FIELDS` | bundled `spec/analytics-fields.json` | MQL resource types and attributes added to `analyticsRunQuery`'s description. |
 | `VSP360_EXAMPLES` | bundled `spec/examples.json` | Example user questions per operation, used to rank search results. Set to an empty string to turn them off. |
 | `VSP360_SPEC` | bundled spec | Path to a different OpenAPI file, e.g. a newer VSP 360 release |
+
+These settings belong to the optional search-improvement tools ([Improving search](#improving-search-logging-and-the-learned-hint)); none is needed to use the server:
+
+| Variable | Default | Description |
+|---|---|---|
+| `VSP360_DECISION_LOG` | *(off)* | Path to a JSON Lines file. When set, each search, describe and call is logged locally (see [Decision log](#decision-log)). |
+| `VSP360_DECISION_LINK_SECONDS` | `120` | A describe or call is tied to the latest search only if it starts within this many seconds of it. |
+| `VSP360_DECISION_COLLECT` | `false` | `true` turns on collection mode (needs `VSP360_DECISION_LOG`). |
+| `VSP360_DECISION_COLLECT_SECONDS` | `600` | In collection mode, how long a search result keeps its operations callable. |
+| `VSP360_DECISION_HINT` | `false` | `true` adds the learned model's suggested next step to search results; `ab` does so in a random half of sessions. |
+| `VSP360_DECISION_MODEL` | bundled `spec/decision-model.json` | The learned model used by the hint. |
 
 ## Tag names for `VSP360_TOOLSETS`
 

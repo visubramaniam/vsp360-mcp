@@ -39,10 +39,15 @@ const SYNONYMS: Record<string, string[]> = {
 const READ_VERBS = new Set("list show get view display which what whats how status current is are see find check count".split(" "));
 const WRITE_VERBS = new Set("create add delete remove start stop pause resume register unregister rotate send silence expand allocate attach detach install uninstall upload update modify set assign grant revoke enable disable reset generate validate refresh migrate".split(" "));
 
+/** Lower-cased alphanumeric words of a request, in order (no stemming or stopword removal). */
+export function words(text: string): string[] {
+  return text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+}
+
 function intentOf(query: string): "read" | "write" | null {
-  const words = query.toLowerCase().split(/[^a-z]+/);
-  if (words.some((w) => WRITE_VERBS.has(w))) return "write";
-  if (words.some((w) => READ_VERBS.has(w))) return "read";
+  const w = words(query);
+  if (w.some((x) => WRITE_VERBS.has(x))) return "write";
+  if (w.some((x) => READ_VERBS.has(x))) return "read";
   return null;
 }
 
@@ -71,7 +76,7 @@ function expandQuery(query: string): { terms: string[]; original: Set<string> } 
   const base = tokenize(query);
   const original = new Set(base);
   const terms = [...base];
-  for (const raw of query.toLowerCase().split(/[^a-z0-9]+/)) {
+  for (const raw of words(query)) {
     for (const syn of SYNONYMS[raw] ?? []) for (const t of tokenize(syn)) if (!terms.includes(t)) terms.push(t);
   }
   return { terms, original };
@@ -83,10 +88,18 @@ export type Confidence = "high" | "medium" | "low";
 // query API (MQL), not by a dedicated REST operation, so plain search ranks them poorly.
 const ANALYTICS_HINT = /\b(iops|latency|response time|throughput|performance|utili[sz]ation|queue|trend|history|over time|wwns?|hba|initiator|switch ports?|zones?|lun paths?|pools?|ldevs?|host groups?|snapshots? count|pairs?|vm|vms)\b/i;
 
-export function analyticsHint(query: string): string | null {
+function analyticsHint(query: string): string | null {
   return ANALYTICS_HINT.test(query)
     ? "This sounds like a performance, capacity-history or topology question. Those are usually answered with analyticsRunQuery (MQL) rather than a dedicated operation: describe analyticsRunQuery for the syntax."
     : null;
+}
+
+/**
+ * The analytics hint shown with a search result: only when the result is not HIGH confidence. The decision model
+ * uses whether it was shown as a feature, so the server, the evaluation and the training script all call this.
+ */
+export function hintFor(query: string, result: Pick<SearchResult, "confidence">): string | null {
+  return result.confidence !== "high" ? analyticsHint(query) : null;
 }
 
 interface SearchHit {
@@ -135,7 +148,7 @@ export class OperationIndex {
     return Math.log(1 + (n - df + 0.5) / (df + 0.5));
   }
 
-  search(query: string, opts: { tag?: string; limit?: number } = {}): SearchResult {
+  search(query: string, opts: { tag?: string; limit: number }): SearchResult {
     const { terms, original } = expandQuery(query);
     const tag = opts.tag?.toLowerCase();
     const intent = intentOf(query);
@@ -163,7 +176,7 @@ export class OperationIndex {
       hits.push({ op: d.op, score, matched });
     }
     hits.sort((a, b) => b.score - a.score);
-    const limited = hits.slice(0, opts.limit ?? 15);
+    const limited = hits.slice(0, opts.limit);
     return { hits: limited, intent, ...this.confidence(hits, original) };
   }
 

@@ -104,7 +104,7 @@ The container can only see folders you mount into it with `-v host-folder:contai
 | What | Mount | Path to use in requests |
 |---|---|---|
 | Downloads (diagnostic bundles, CSR ZIPs, billing reports, CSV exports) | `-v /Users/YOU/Downloads/vsp360-mcp:/downloads` | Saved to `/downloads`, which appears in the host folder |
-| Uploads (bulk-registration CSV, TLS certificate, upgrade package) | `-v /Users/YOU/vsp360-uploads:/uploads:ro` | `/uploads/devices.csv` |
+| Uploads (bulk-registration CSV, TLS certificate, upgrade package) | `-v /Users/YOU/vsp360-uploads:/uploads:ro` plus `-e VSP360_UPLOAD_DIR=/uploads` | `/uploads/devices.csv` |
 | Decision log (optional) | `-v /Users/YOU/vsp360-logs:/logs` plus `-e VSP360_DECISION_LOG=/logs/decisions.jsonl` | Written to `/logs`, which appears in the host folder |
 | Private CA certificate | `-v /Users/YOU/certs/vsp360-ca.pem:/certs/ca.pem:ro` plus `-e VSP360_CA_CERT=/certs/ca.pem` | n/a |
 
@@ -131,7 +131,9 @@ All the [environment variables in the main README](README.md#configuration) work
 | `VSP360_ALLOW_WRITES` | `false` | Set to `true` to allow operations that change VSP 360 |
 | `VSP360_CA_CERT` | | Path *inside the container* to a CA certificate |
 | `VSP360_INSECURE_TLS` | `false` | Skips certificate checking; use on lab systems only |
-| `VSP360_DOWNLOAD_DIR` | `/downloads` | Already set in the image; mount a folder here |
+| `VSP360_DOWNLOAD_DIR` | `/downloads` | Already set in the image; mount a folder here. Downloads and `save_to` files are written only inside it. |
+| `VSP360_UPLOAD_DIR` | *(any non-hidden path)* | Path *inside the container* that uploads must come from, e.g. `/uploads` |
+| `VSP360_ALLOW_SECRET_READS` | `false` | Allow the one read that returns a live client secret |
 | `VSP360_DECISION_LOG` | *(off)* | Path *inside the container* to a JSON Lines file recording how search results are used; mount a folder for it (see [Files](#5-files-downloads-uploads-and-certificates)) |
 | `VSP360_DECISION_HINT` | `false` | `true` adds a learned suggested next step to search results; `ab` does so in a random half of sessions |
 | `VSP360_SPEC` | bundled 1.4 spec | Use a different OpenAPI file (see below) |

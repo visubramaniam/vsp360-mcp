@@ -3,7 +3,7 @@
 // request as not answerable by these results. Multinomial logistic regression
 // over search signals; weights are trained offline by tests/train-decision.mjs
 // and loaded from spec/decision-model.json.
-import type { SearchResult } from "./search.js";
+import { words, type SearchResult } from "./search.js";
 
 export const DECISIONS = ["call", "compare", "analytics", "not_found"] as const;
 export type Decision = (typeof DECISIONS)[number];
@@ -26,7 +26,7 @@ export interface DecisionModel {
 export function features(query: string, r: SearchResult, hint: boolean): number[] {
   const ids = r.hits.map((h) => h.op.operationId);
   const [a, b] = r.hits;
-  const terms = query.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length > 1).length;
+  const terms = words(query).filter((t) => t.length > 1).length;
   return [
     Math.log(Math.min(r.lead ?? 3, 3)),
     r.coverage,
@@ -45,13 +45,12 @@ export function features(query: string, r: SearchResult, hint: boolean): number[
   ];
 }
 
-export function predict(model: DecisionModel, x: number[]): { decision: Decision; p: number; probs: Record<string, number> } {
+export function predict(model: DecisionModel, x: number[]): { decision: Decision; p: number } {
   const z = x.map((v, i) => (v - model.mean[i]) / (model.std[i] || 1));
   const logits = model.weights.map((w) => w[0] + z.reduce((s, v, i) => s + v * w[i + 1], 0));
   const m = Math.max(...logits);
   const e = logits.map((l) => Math.exp(l - m));
   const sum = e.reduce((s, v) => s + v, 0);
-  const probs = Object.fromEntries(model.classes.map((c, i) => [c, e[i] / sum]));
   const best = e.indexOf(Math.max(...e));
-  return { decision: model.classes[best] as Decision, p: e[best] / sum, probs };
+  return { decision: model.classes[best] as Decision, p: e[best] / sum };
 }

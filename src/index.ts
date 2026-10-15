@@ -4,191 +4,80 @@
 // Every operation in the OpenAPI spec is reachable through three discovery
 // tools (list, describe, call). Selected tags can also be exposed as one
 // direct tool per operation with VSP360_TOOLSETS.
-import { existsSync, readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { CallToolRequestSchema, ListToolsRequestSchema, type Tool } from "@modelcontextprotocol/sdk/types.js";
-import { Spec, type Operation, fileFields, isMultipart, toolParamName } from "./spec.js";
+import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { Spec, type Operation, fileFields, isMultipart } from "./spec.js";
 import { Vsp360Client, loadConfig, type CallArgs } from "./client.js";
-import { OperationIndex, analyticsHint } from "./search.js";
+import { OperationIndex, hintFor } from "./search.js";
 import { DecisionLog } from "./decisionlog.js";
 import { AnalyticsFields } from "./analyticsfields.js";
 import { features as decisionFeatures, predict, type Decision, type DecisionModel } from "./decision.js";
+import { VERSION, loadServerConfig, loadOptionalJson } from "./config.js";
+import { metaTools, directTool, toolName } from "./tools.js";
 
 type Json = any;
 
-const here = dirname(fileURLToPath(import.meta.url));
-const spec = new Spec(process.env.VSP360_SPEC || join(here, "..", "spec", "vsp360-openapi.yaml"));
-const allowWrites = process.env.VSP360_ALLOW_WRITES === "true";
-// Example user questions per operation sharpen search; VSP360_EXAMPLES="" turns them off.
-const examplesPath = process.env.VSP360_EXAMPLES ?? join(here, "..", "spec", "examples.json");
-const examples: Record<string, string[]> = examplesPath && existsSync(examplesPath) ? JSON.parse(readFileSync(examplesPath, "utf8")) : {};
+/** Startup steps that read files: a bad file stops the server with one clear line instead of a stack trace. */
+function orExit<T>(load: () => T): T {
+  try {
+    return load();
+  } catch (e) {
+    const msg = (e as Error).message;
+    console.error(msg.startsWith("[vsp360-mcp]") ? msg : `[vsp360-mcp] cannot start: ${msg}`);
+    process.exit(1);
+  }
+}
+
+const cfg = loadServerConfig();
+const spec = orExit(() => new Spec(cfg.specPath));
+const examples = orExit(() => loadOptionalJson<Record<string, string[]>>(cfg.examplesPath, "example questions", {}));
+const index = new OperationIndex(spec.operations.values(), examples);
+const analyticsFields = orExit(() => new AnalyticsFields(cfg.analyticsFieldsPath));
+
 // Learned decision model: suggests what to do with a search result. Shown only when VSP360_DECISION_HINT is
 // "true", or in a random half of server sessions when it is "ab"; predicted and logged whenever the
 // decision log is on, so sessions with and without the hint can be compared.
-const hintMode = process.env.VSP360_DECISION_HINT ?? "false";
-const modelPath = process.env.VSP360_DECISION_MODEL ?? join(here, "..", "spec", "decision-model.json");
-const decisionModel: DecisionModel | undefined = existsSync(modelPath) ? JSON.parse(readFileSync(modelPath, "utf8")) : undefined;
-const showHint = !!decisionModel && (hintMode === "true" || (hintMode === "ab" && Math.random() < 0.5));
-const index = new OperationIndex(spec.operations.values(), examples);
-const analyticsFields = new AnalyticsFields(process.env.VSP360_ANALYTICS_FIELDS ?? join(here, "..", "spec", "analytics-fields.json"));
-const decisions = new DecisionLog(process.env.VSP360_DECISION_LOG || undefined, Number(process.env.VSP360_DECISION_LINK_SECONDS) || 120);
+const decisionModel = orExit(() => loadOptionalJson<DecisionModel | undefined>(cfg.decision.modelPath, "decision model", undefined));
+const showHint = !!decisionModel && (cfg.decision.hintMode === "true" || (cfg.decision.hintMode === "ab" && Math.random() < 0.5));
+const decisions = new DecisionLog(cfg.decision.logPath, cfg.decision.linkSeconds);
 // Collection mode: every search must carry the user's request, and every call must be to an operation that
 // came up in a search within the window, so each question yields a labelled search. Needs the decision log.
-const collect = decisions.enabled && process.env.VSP360_DECISION_COLLECT === "true";
-const collectSeconds = Number(process.env.VSP360_DECISION_COLLECT_SECONDS) || 600;
-if (process.env.VSP360_DECISION_COLLECT === "true" && !decisions.enabled)
-  console.error("[vsp360-mcp] VSP360_DECISION_COLLECT ignored: set VSP360_DECISION_LOG to turn the decision log on");
-const toolsets = (process.env.VSP360_TOOLSETS ?? "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+const collect = decisions.enabled && cfg.decision.collect;
+if (cfg.decision.collect && !decisions.enabled) console.error("[vsp360-mcp] VSP360_DECISION_COLLECT ignored: set VSP360_DECISION_LOG to turn the decision log on");
 
+// The client is created on first use so the server can start (and list tools) before VSP 360 is reachable,
+// but the settings are checked now so a mistake shows up in the log at startup, not on the first call.
+try {
+  loadConfig();
+} catch (e) {
+  console.error(`[vsp360-mcp] warning: ${(e as Error).message}. API calls will fail until this is fixed.`);
+}
 let client: Vsp360Client | undefined;
 function getClient(): Vsp360Client {
-  // Created lazily so the server can start (and list tools) before credentials are checked.
   client ??= new Vsp360Client(loadConfig());
   return client;
 }
 
-// ---------- discovery tools ----------
-
-const META_TOOLS: Tool[] = [
-  {
-    name: "vsp360_list_operations",
-    description:
-      "Browse the VSP 360 REST API. With no arguments, lists the API areas (tags) and how many operations each has. " +
-      "With `tag` and/or `query`, lists matching operations (operationId, method, path, summary). " +
-      "Use this first to find the operationId you need, then vsp360_describe_operation and vsp360_call_operation." +
-      (allowWrites ? "" : " Operations marked [write] are blocked because the server runs read-only.") +
-      (collect
-        ? " DATA COLLECTION MODE: search with `query` and `request` for every user question, even if you already know the operation; " +
-          "vsp360_call_operation only accepts operations that appeared in a search in the last few minutes."
-        : ""),
-    inputSchema: {
-      type: "object",
-      properties: {
-        tag: { type: "string", description: "API area, e.g. 'Device Registry', 'Platform Alerts', 'Users'. Case-insensitive." },
-        query: { type: "string", description: "What you want to do, in plain words (e.g. 'volumes with no host path', 'replication pairs status'). Ranked by BM25 relevance with a confidence rating." },
-        limit: { type: "integer", minimum: 1, maximum: 40, description: "Maximum results for a query (default 10)." },
-        // Offered only while the decision log is on: it is recorded, never used for ranking.
-        ...(decisions.enabled
-          ? { request: { type: "string", description: "The user's request that led to this search, in their own words. Recorded in the local decision log to improve search; does not affect results." + (collect ? " Required with `query`." : "") } }
-          : {}),
-      },
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
-  },
-  {
-    name: "vsp360_describe_operation",
-    description:
-      "Show everything needed to call one VSP 360 operation: method and path, required permissions and prerequisites, " +
-      "parameters, request body schema and response schema.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        operationId: { type: "string", description: "operationId from vsp360_list_operations" },
-        resourceType: { type: "string", description: "analyticsRunQuery only: an MQL resource type (e.g. raidPort, raidPool, vm) to list all its attributes and relations." },
-      },
-      required: ["operationId"],
-    },
-    annotations: { readOnlyHint: true, openWorldHint: false },
-  },
-  {
-    name: "vsp360_call_operation",
-    description:
-      "Call any VSP 360 REST API operation by operationId. Authentication is handled automatically. " +
-      "Pass path, query and header parameters by name in `params`, and the JSON request body in `body`. " +
-      "Collections are paginated with limit/offset (max 100 per page); set all_pages to follow the `next` link. " +
-      "Binary responses (ZIP, gzip, CSV downloads) are saved to disk and the file path is returned." +
-      (allowWrites ? "" : " Only read operations are allowed; the server runs read-only."),
-    inputSchema: {
-      type: "object",
-      properties: {
-        operationId: { type: "string" },
-        ...commonCallProperties(true),
-      },
-      required: ["operationId"],
-    },
-    annotations: { readOnlyHint: !allowWrites, destructiveHint: allowWrites, openWorldHint: true },
-  },
-];
-
-function commonCallProperties(generic: boolean): Record<string, Json> {
-  return {
-    ...(generic
-      ? {
-          params: { type: "object", description: "Path, query and header parameters by name, e.g. {\"id\": \"123\", \"limit\": 100}", additionalProperties: true },
-          body: { description: "Request body (JSON object or array) for POST/PUT/PATCH operations. For multipart uploads, the non-file form fields." },
-          files: { type: "object", description: "Multipart uploads only: form field name -> local file path", additionalProperties: { type: "string" } },
-        }
-      : {}),
-    all_pages: { type: "boolean", description: "Follow RFC 8288 `next` links and return every page (GET collections only)." },
-    max_pages: { type: "integer", minimum: 1, maximum: 200, description: "Page cap when all_pages is set (default 20)." },
-    save_to: { type: "string", description: "Write the response body to this local file path instead of returning it." },
-  };
-}
-
-// ---------- direct per-operation tools ----------
-
-function toolName(op: Operation): string {
-  return op.operationId.length <= 64 ? op.operationId : op.operationId.slice(0, 64);
-}
-
-function directTool(op: Operation): Tool {
-  const properties: Record<string, Json> = {};
-  const required: string[] = [];
-  for (const p of op.params) {
-    const key = toolParamName(p.name);
-    const note = key === p.name ? undefined : `Sent to the API as \`${p.name}\`.`;
-    properties[key] = { ...p.schema, description: [p.description, p.schema.description, note].filter(Boolean).join(" ") || undefined };
-    if (p.required) required.push(key);
+/** Why an operation may not be called with the current settings, if it may not. */
+function blockedReason(op: Operation): string | undefined {
+  if (!op.readOnly && !cfg.allowWrites) {
+    return `${op.operationId} (${op.method} ${op.path}) changes VSP 360 state and the server is running read-only. Set VSP360_ALLOW_WRITES=true in the MCP server configuration to enable write operations.`;
   }
-  if (op.bodySchema) {
-    if (isMultipart(op)) {
-      const fields = fileFields(op);
-      const rest = { ...op.bodySchema, properties: { ...op.bodySchema.properties } };
-      for (const f of fields) delete rest.properties[f];
-      rest.required = (rest.required ?? []).filter((r: string) => !fields.includes(r));
-      properties.files = {
-        type: "object",
-        description: "Local file paths for the upload fields",
-        properties: Object.fromEntries(fields.map((f) => [f, { type: "string", description: op.bodySchema.properties[f].description }])),
-        required: fields.filter((f) => (op.bodySchema.required ?? []).includes(f)),
-      };
-      required.push("files");
-      if (Object.keys(rest.properties).length) properties.body = rest;
-    } else {
-      properties.body = op.bodySchema;
-      if (op.bodyRequired) required.push("body");
-    }
+  if (op.secret && !cfg.allowSecretReads) {
+    return `${op.operationId} returns a credential in clear text, which would then be part of the conversation. It is blocked unless VSP360_ALLOW_SECRET_READS=true is set in the MCP server configuration.`;
   }
-  Object.assign(properties, op.method === "GET" ? commonCallProperties(false) : { save_to: commonCallProperties(false).save_to });
-
-  return {
-    name: toolName(op),
-    description: `${op.summary} (${op.method} ${op.path})\n\n${op.description}`.slice(0, 2000),
-    inputSchema: { type: "object", properties, ...(required.length ? { required } : {}) },
-    annotations: {
-      title: op.summary,
-      readOnlyHint: op.readOnly,
-      destructiveHint: op.destructive,
-      idempotentHint: ["GET", "PUT", "DELETE"].includes(op.method),
-      openWorldHint: true,
-    },
-  };
+  return undefined;
 }
 
 const directOps = new Map<string, Operation>();
-const wanted = toolsets.map((t) => t.toLowerCase());
+const wanted = cfg.toolsets.map((t) => t.toLowerCase());
 for (const op of spec.operations.values()) {
   if (!wanted.includes("all") && !wanted.includes(op.tag.toLowerCase())) continue;
-  if (!op.readOnly && !allowWrites) continue;
+  if (blockedReason(op)) continue;
   directOps.set(toolName(op), op);
 }
-const unknownSets = toolsets.filter((t) => t.toLowerCase() !== "all" && !spec.tags.some((x) => x.name.toLowerCase() === t.toLowerCase()));
+const unknownSets = cfg.toolsets.filter((t) => t.toLowerCase() !== "all" && !spec.tags.some((x) => x.name.toLowerCase() === t.toLowerCase()));
 if (unknownSets.length) console.error(`[vsp360-mcp] Unknown VSP360_TOOLSETS entries ignored: ${unknownSets.join(", ")}`);
 
 // ---------- handlers ----------
@@ -197,28 +86,41 @@ function text(t: string, isError = false) {
   return { content: [{ type: "text" as const, text: t }], ...(isError ? { isError: true } : {}) };
 }
 
+/** Tool arguments are not schema-validated by the SDK; these coerce the few scalars the handlers read. */
+const str = (v: unknown): string => (typeof v === "string" ? v : typeof v === "number" ? String(v) : "");
+const int = (v: unknown, fallback: number): number => (typeof v === "number" || (typeof v === "string" && v.trim() !== "")) && Number.isFinite(Number(v)) ? Math.trunc(Number(v)) : fallback;
+
+const unknownOperation = (id: unknown) => text(`Unknown operationId "${str(id)}". Use vsp360_list_operations to find it.`, true);
+
+function accessLabel(op: Operation): string {
+  const blocked = blockedReason(op);
+  if (op.secret) return blocked ? "read, returns a secret (blocked: set VSP360_ALLOW_SECRET_READS=true)" : "read, returns a secret";
+  if (!op.readOnly) return blocked ? "write (blocked: server is read-only; set VSP360_ALLOW_WRITES=true)" : "write";
+  return "read";
+}
+
 function listOperations(args: Json) {
-  const tag = (args.tag ?? "").toLowerCase();
-  const query = String(args.query ?? "").trim();
+  const tag = str(args.tag).toLowerCase();
+  const query = str(args.query).trim();
   if (!tag && !query) {
     const lines = spec.tags.map((t) => `- ${t.name} (${t.count}): ${t.description}`);
     return text(`VSP 360 API areas (${spec.operations.size} operations). Pass tag or query to list operations.\n\n${lines.join("\n")}`);
   }
-  const fmt = (op: Operation) => `${op.operationId} [${op.readOnly ? "read" : "write"}] ${op.method} ${op.path} — ${op.summary}`;
+  const fmt = (op: Operation) => `${op.operationId} [${op.secret ? "secret" : op.readOnly ? "read" : "write"}] ${op.method} ${op.path} — ${op.summary}`;
   if (!query) {
     const ops = [...spec.operations.values()].filter((op) => op.tag.toLowerCase() === tag);
     if (!ops.length) return text("No operations in that area. Call with no arguments to see the available tags.");
     return text(`${ops.length} operation(s) in ${ops[0].tag}:\n${ops.map((op) => "- " + fmt(op)).join("\n")}`);
   }
-  const limit = Math.min(Math.max(Number(args.limit) || 10, 1), 40);
+  const limit = Math.min(Math.max(int(args.limit, 10) || 10, 1), 40);
   // The decision model was trained on 10-result searches, so its features always come from at least that many;
   // only the first `limit` hits are shown and logged.
   const result = index.search(query, { tag: tag || undefined, limit: Math.max(limit, 10) });
   const { confidence, reason, lead, coverage, intent } = result;
   const hits = result.hits.slice(0, limit);
-  const hint = confidence !== "high" ? analyticsHint(query) : null;
+  const hint = hintFor(query, result);
   const suggestion = decisionModel && hits.length && (showHint || decisions.enabled) ? predict(decisionModel, decisionFeatures(query, result, !!hint)) : undefined;
-  const request = typeof args.request === "string" && args.request.trim() ? args.request.trim() : undefined;
+  const request = str(args.request).trim() || undefined;
   if (collect && !request) {
     decisions.refused({ tool: "vsp360_list_operations", reason: "no_request" });
     return text("Data collection mode: pass `request` with the user's question in their own words, then search again.", true);
@@ -250,12 +152,13 @@ function suggestionText(d: Decision, top: string): string {
 }
 
 function describeOperation(args: Json) {
-  const op = spec.operations.get(args.operationId);
-  if (!op) return text(`Unknown operationId "${args.operationId}". Use vsp360_list_operations to find it.`, true);
+  const op = spec.operations.get(str(args.operationId));
+  if (!op) return unknownOperation(args.operationId);
   decisions.describe(op.operationId);
-  if (op.operationId === "analyticsRunQuery" && args.resourceType) {
-    const t = analyticsFields.type(String(args.resourceType));
-    if (!t) return text(`Unknown MQL resource type "${args.resourceType}". Known types: ${analyticsFields.names().join(", ")}.`, true);
+  const resourceType = str(args.resourceType);
+  if (op.operationId === "analyticsRunQuery" && resourceType) {
+    const t = analyticsFields.type(resourceType);
+    if (!t) return text(`Unknown MQL resource type "${resourceType}". Known types: ${analyticsFields.names().join(", ")}.`, true);
     return text(JSON.stringify(t, null, 2));
   }
   const out: Json = {
@@ -263,7 +166,7 @@ function describeOperation(args: Json) {
     method: op.method,
     path: op.path,
     tag: op.tag,
-    access: op.readOnly ? "read" : allowWrites ? "write" : "write (blocked: server is read-only; set VSP360_ALLOW_WRITES=true)",
+    access: accessLabel(op),
     summary: op.summary,
     description: op.description,
     parameters: op.params.map((p) => ({ name: p.name, in: p.in, required: p.required, description: p.description, schema: p.schema })),
@@ -278,23 +181,20 @@ function describeOperation(args: Json) {
 }
 
 async function runOperation(op: Operation, args: CallArgs, via: "meta" | "direct") {
-  if (collect && !decisions.searchedFor(op.operationId, collectSeconds)) {
+  if (collect && !decisions.searchedFor(op.operationId, cfg.decision.collectSeconds)) {
     decisions.refused({ tool: via === "meta" ? "vsp360_call_operation" : toolName(op), operationId: op.operationId, reason: "not_searched" });
     return text(
-      `Data collection mode: ${op.operationId} has not appeared in a search in the last ${Math.round(collectSeconds / 60)} minutes. ` +
+      `Data collection mode: ${op.operationId} has not appeared in a search in the last ${Math.round(cfg.decision.collectSeconds / 60)} minutes. ` +
         "Call vsp360_list_operations with `query` and `request` (the user's question) first; call this operation if it is in the results.",
       true,
     );
   }
   const argNames = [...Object.keys(args.params ?? {}), ...(args.body !== undefined ? ["body"] : []), ...(args.files ? ["files"] : [])];
   const logged = decisions.call({ operationId: op.operationId, via, argNames });
-  if (!op.readOnly && !allowWrites) {
+  const blocked = blockedReason(op);
+  if (blocked) {
     logged({ status: 0, ok: false, blocked: true });
-    return text(
-      `${op.operationId} (${op.method} ${op.path}) changes VSP 360 state and the server is running read-only. ` +
-        `Set VSP360_ALLOW_WRITES=true in the MCP server configuration to enable write operations.`,
-      true,
-    );
+    return text(blocked, true);
   }
   try {
     const result = await getClient().call(op, args);
@@ -306,10 +206,11 @@ async function runOperation(op: Operation, args: CallArgs, via: "meta" | "direct
   }
 }
 
-const server = new Server({ name: "vsp360-mcp", version: "0.1.13" }, { capabilities: { tools: {} } });
+const server = new Server({ name: "vsp360-mcp", version: VERSION }, { capabilities: { tools: {} } });
+const tools = metaTools({ allowWrites: cfg.allowWrites, logging: decisions.enabled, collect });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [...META_TOOLS, ...[...directOps.values()].map(directTool)],
+  tools: [...tools, ...[...directOps.values()].map(directTool)],
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
@@ -319,8 +220,8 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
     if (name === "vsp360_list_operations") return listOperations(args);
     if (name === "vsp360_describe_operation") return describeOperation(args);
     if (name === "vsp360_call_operation") {
-      const op = spec.operations.get(args.operationId);
-      if (!op) return text(`Unknown operationId "${args.operationId}". Use vsp360_list_operations to find it.`, true);
+      const op = spec.operations.get(str(args.operationId));
+      if (!op) return unknownOperation(args.operationId);
       return await runOperation(op, args, "meta");
     }
     const op = directOps.get(name);
@@ -336,8 +237,8 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
 
 await server.connect(new StdioServerTransport());
 console.error(
-  `[vsp360-mcp] ready: ${spec.operations.size} operations, ${directOps.size} direct tools, ${allowWrites ? "read/write" : "read-only"}` +
+  `[vsp360-mcp] ready: ${spec.operations.size} operations, ${directOps.size} direct tools, ${cfg.allowWrites ? "read/write" : "read-only"}` +
     (decisions.enabled ? `, decision log on` : "") +
-    (collect ? `, collection mode on (${collectSeconds}s window)` : "") +
-    (showHint ? ", decision hint on" : hintMode !== "false" && !decisionModel ? ", decision hint off (no model file)" : hintMode === "ab" ? ", decision hint off (A/B control)" : ""),
+    (collect ? `, collection mode on (${cfg.decision.collectSeconds}s window)` : "") +
+    (showHint ? ", decision hint on" : cfg.decision.hintMode !== "false" && !decisionModel ? ", decision hint off (no model file)" : cfg.decision.hintMode === "ab" ? ", decision hint off (A/B control)" : ""),
 );
