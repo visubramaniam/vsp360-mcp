@@ -1,0 +1,100 @@
+{
+  "manifest_version": "0.2",
+  "name": "vsp360-mcp",
+  "display_name": "Hitachi VSP 360",
+  "version": "0.0.0",
+  "description": "Query and manage Hitachi VSP 360 through its REST API.",
+  "long_description": "Gives Claude access to all 264 operations of the Hitachi VSP 360 1.4 REST API through three discovery tools: find an operation, read its parameters, then call it. The server is read-only by default; operations that change state are refused unless you turn on Allow writes.",
+  "author": {
+    "name": "Vinod Subramaniam"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/visubramaniam/vsp360-mcp"
+  },
+  "homepage": "https://github.com/visubramaniam/vsp360-mcp",
+  "documentation": "https://github.com/visubramaniam/vsp360-mcp#readme",
+  "license": "MIT",
+  "keywords": ["hitachi", "vsp360", "storage", "san"],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/index.js"],
+      "env": {
+        "VSP360_URL": "${user_config.url}",
+        "VSP360_CLIENT_ID": "${user_config.client_id}",
+        "VSP360_CLIENT_SECRET": "${user_config.client_secret}",
+        "VSP360_TOOLSETS": "${user_config.toolsets}",
+        "VSP360_ALLOW_WRITES": "${user_config.allow_writes}",
+        "VSP360_CA_CERT": "${user_config.ca_cert}",
+        "VSP360_INSECURE_TLS": "${user_config.insecure_tls}",
+        "VSP360_DOWNLOAD_DIR": "${user_config.download_dir}"
+      }
+    }
+  },
+  "tools": [
+    { "name": "vsp360_list_operations", "description": "Search the VSP 360 API operations by keyword or tag." },
+    { "name": "vsp360_describe_operation", "description": "Show an operation's parameters and request body schema." },
+    { "name": "vsp360_call_operation", "description": "Call a VSP 360 API operation." }
+  ],
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": { "node": ">=20.0.0" }
+  },
+  "user_config": {
+    "url": {
+      "type": "string",
+      "title": "VSP 360 URL",
+      "description": "Base URL of your VSP 360, e.g. https://vsp360.example.com",
+      "required": true
+    },
+    "client_id": {
+      "type": "string",
+      "title": "Client ID",
+      "description": "Client ID of the VSP 360 service account",
+      "required": true
+    },
+    "client_secret": {
+      "type": "string",
+      "title": "Client secret",
+      "description": "Client secret of the VSP 360 service account",
+      "required": true,
+      "sensitive": true
+    },
+    "toolsets": {
+      "type": "string",
+      "title": "Direct toolsets",
+      "description": "Optional. Comma-separated API areas (tags) to expose as direct tools, e.g. Device Registry,Platform Alerts",
+      "required": false,
+      "default": ""
+    },
+    "allow_writes": {
+      "type": "boolean",
+      "title": "Allow writes",
+      "description": "Allow operations that change state. Leave off for read-only access.",
+      "required": false,
+      "default": false
+    },
+    "ca_cert": {
+      "type": "file",
+      "title": "CA certificate",
+      "description": "Optional. PEM file of the CA that signed the VSP 360 certificate",
+      "required": false
+    },
+    "insecure_tls": {
+      "type": "boolean",
+      "title": "Skip TLS verification",
+      "description": "Accept any certificate. For labs with self-signed certificates only.",
+      "required": false,
+      "default": false
+    },
+    "download_dir": {
+      "type": "directory",
+      "title": "Download folder",
+      "description": "Optional. Where downloaded files are saved. Defaults to ~/Downloads/vsp360-mcp",
+      "required": false
+    }
+  }
+}

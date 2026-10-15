@@ -113,33 +113,47 @@ With `VSP360_DECISION_COLLECT=true` (and the log on), the server makes every que
 
 ## Setup
 
-Prefer Docker? See [README.docker.md](README.docker.md) to run the published container image instead of building from source.
+First, create a service account in VSP 360 and note its client ID and secret. Give it the access your use case needs: `admin` covers alerts, logs and system operations; for devices, use a group whose access policy covers the device types.
 
-1. Create a service account in VSP 360 and note its client ID and secret. Give it the access your use case needs: `admin` covers alerts, logs and system operations; for devices, use a group whose access policy covers the device types.
-2. Build the server:
+Then install the server in one of these ways. Each [GitHub release](https://github.com/visubramaniam/vsp360-mcp/releases) has the packages and a `SHA256SUMS` file.
+
+| Package | Needs | Use it for |
+|---|---|---|
+| `vsp360-mcp-<version>.mcpb` | Claude Desktop | One-click install: open the file and Claude Desktop asks for the URL, client ID and secret. |
+| `vsp360-mcp-<version>-<platform>.tar.gz` / `.zip` | nothing | Standalone install on macOS, Linux or Windows (x64 and arm64), with Node.js bundled in. |
+| `vsp360-mcp-<version>.tgz` | Node.js 20+ | `npm install -g`, CI/CD pipelines. |
+| Docker image | Docker | See [README.docker.md](README.docker.md). |
+| Source | Node.js 22+ | Development: `npm install && npm run build`, then use `node /ABSOLUTE/PATH/TO/vsp360-mcp/dist/index.js` as the command. |
+
+**Standalone.** Unpack the archive anywhere and use `bin/vsp360-mcp` (`bin\vsp360-mcp.cmd` on Windows) as the server command. You can symlink it onto your `PATH`:
 
 ```bash
-npm install && npm run build
+tar -xzf vsp360-mcp-0.1.15-linux-x64.tar.gz -C /opt && ln -s /opt/vsp360-mcp-0.1.15-linux-x64/bin/vsp360-mcp /usr/local/bin/vsp360-mcp
 ```
+
+**npm or CI/CD.** Install straight from the release URL. The `vsp360-mcp` command then starts the server:
+
+```bash
+npm install -g https://github.com/visubramaniam/vsp360-mcp/releases/download/v0.1.15/vsp360-mcp-0.1.15.tgz
+```
+
+The examples below use `vsp360-mcp` as the command; substitute the path from whichever install you chose.
 
 ### Claude Code
 
-Replace `/ABSOLUTE/PATH/TO` with the folder's real path:
-
 ```bash
-claude mcp add vsp360 -e VSP360_URL=https://vsp360.example.com -e VSP360_CLIENT_ID=my-service-account -e VSP360_CLIENT_SECRET=REPLACE_ME -e "VSP360_TOOLSETS=Device Registry,Platform Alerts" -- node /ABSOLUTE/PATH/TO/vsp360-mcp/dist/index.js
+claude mcp add vsp360 -e VSP360_URL=https://vsp360.example.com -e VSP360_CLIENT_ID=my-service-account -e VSP360_CLIENT_SECRET=REPLACE_ME -e "VSP360_TOOLSETS=Device Registry,Platform Alerts" -- vsp360-mcp
 ```
 
 ### Claude Desktop
 
-Add this to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+The `.mcpb` package is the easiest way. To configure it by hand instead, add this to `~/Library/Application Support/Claude/claude_desktop_config.json`. Claude Desktop does not read your shell's `PATH`, so give the command's full path, e.g. `/usr/local/bin/vsp360-mcp`:
 
 ```json
 {
   "mcpServers": {
     "vsp360": {
-      "command": "node",
-      "args": ["/ABSOLUTE/PATH/TO/vsp360-mcp/dist/index.js"],
+      "command": "/usr/local/bin/vsp360-mcp",
       "env": {
         "VSP360_URL": "https://vsp360.example.com",
         "VSP360_CLIENT_ID": "my-service-account",
@@ -190,6 +204,12 @@ These settings belong to the optional search-improvement tools ([Improving searc
 ## Tag names for `VSP360_TOOLSETS`
 
 Users · Groups · Group Access · Service Accounts · Roles · Identity Providers · Active Directory · Authentication Settings · Authorization · Access Catalog · Access Policies · Privileged Access Management · Block Single Sign-On · Device Registration · Device Registry · Device Operation Jobs · File and Object Device Registration · Host and Hypervisor Discovery · Platform Alerts · VSP 360 Cluster Health · Logs · Diagnostics · Platform Profiles · Resource Management · Platform Upgrade · Application Lifecycle · TLS Certificates · Trusted CA Certificates · Notifications · Usage and Billing Reports · Product Information · Data Protection / Copies · Data Protection / Policies · Orchestration / Execute Workflows · Analytics / Query API
+
+## Building the packages
+
+`npm run package` builds every release package into `release/`. Use `--only npm,mcpb,standalone` and `--targets linux-x64,...` to build fewer, e.g. `npm run package -- --only standalone --targets darwin-arm64`. The standalone packages bundle Node.js 24, downloaded from nodejs.org and checked against its published SHA-256 sums.
+
+The [Release workflow](.github/workflows/release.yml) runs when a `v*` tag is pushed. It runs the tests, builds the packages and attaches them to the tag's GitHub release; if that release doesn't exist yet, it's created from the version's `CHANGELOG.md` section. If the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets are set, it also pushes the `linux/amd64` and `linux/arm64` Docker image. To rebuild an existing tag's packages, run the workflow by hand with that tag.
 
 ## Updating for a new VSP 360 release
 

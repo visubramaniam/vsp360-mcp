@@ -6,3 +6,4 @@ reports
 .DS_Store
 *.md
 !README.md
+release

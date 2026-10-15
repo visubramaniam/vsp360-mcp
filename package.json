@@ -19,7 +19,8 @@
     "decision-report": "node tests/decision-report.mjs",
     "collect-batch": "node tests/collect-batch.mjs",
     "train-decision": "node tests/train-decision.mjs",
-    "test": "npm run build && node --test \"tests/unit/*.test.mjs\" && node tests/search-eval.mjs"
+    "test": "npm run build && node --test \"tests/unit/*.test.mjs\" && node tests/search-eval.mjs",
+    "package": "npm run build && node scripts/package.mjs"
   },
   "engines": {
     "node": ">=20"
@@ -30,6 +31,7 @@
     "yaml": "2.8.1"
   },
   "devDependencies": {
+    "@anthropic-ai/mcpb": "2.1.2",
     "@anthropic-ai/sdk": "^0.134.0",
     "@types/node": "22.18.8",
     "typescript": "5.9.3"
