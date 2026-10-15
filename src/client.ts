@@ -1,7 +1,7 @@
 // HTTP client for VSP 360: handles the client-credentials token, TLS options,
 // pagination, file uploads and binary downloads.
 import { readFileSync, mkdirSync, writeFileSync, openAsBlob, existsSync, realpathSync, createWriteStream } from "node:fs";
-import { basename, join, resolve, sep, isAbsolute } from "node:path";
+import { basename, dirname, join, relative, resolve, sep, isAbsolute } from "node:path";
 import { homedir } from "node:os";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -19,6 +19,8 @@ interface Config {
   caCertFile?: string;
   timeoutMs: number;
   maxResponseChars: number;
+  /** Bytes read from one response, or from all pages of an all_pages call, before giving up. */
+  maxResponseBytes: number;
   downloadDir: string;
   /** save_to may point anywhere (VSP360_SAVE_ANYWHERE=true); otherwise it must stay inside downloadDir. */
   saveAnywhere: boolean;
@@ -47,6 +49,16 @@ function parseRewrites(spec: string): [string, string][] {
 export function loadConfig(env = process.env): Config {
   const missing = ["VSP360_URL", "VSP360_CLIENT_ID", "VSP360_CLIENT_SECRET"].filter((k) => !env[k]);
   if (missing.length) throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
+  let protocol: string;
+  try {
+    protocol = new URL(env.VSP360_URL!).protocol;
+  } catch {
+    throw new Error(`VSP360_URL is not a valid URL: ${env.VSP360_URL}`);
+  }
+  if (protocol === "http:" && env.VSP360_ALLOW_HTTP !== "true") {
+    throw new Error("VSP360_URL uses http://, which would send the client secret and tokens unencrypted. Use https://, or set VSP360_ALLOW_HTTP=true to allow it");
+  }
+  if (protocol !== "http:" && protocol !== "https:") throw new Error(`VSP360_URL must be an https:// URL: ${env.VSP360_URL}`);
   return {
     baseUrl: env.VSP360_URL!.replace(/\/+$/, ""),
     clientId: env.VSP360_CLIENT_ID!,
@@ -56,6 +68,7 @@ export function loadConfig(env = process.env): Config {
     caCertFile: env.VSP360_CA_CERT || undefined,
     timeoutMs: Number(env.VSP360_TIMEOUT_MS ?? 120_000),
     maxResponseChars: Number(env.VSP360_MAX_RESPONSE_CHARS ?? 60_000),
+    maxResponseBytes: Number(env.VSP360_MAX_RESPONSE_BYTES) || 64 * 1024 * 1024,
     downloadDir: resolve(expandHome(env.VSP360_DOWNLOAD_DIR || join(homedir(), "Downloads", "vsp360-mcp"))),
     saveAnywhere: env.VSP360_SAVE_ANYWHERE === "true",
     uploadDir: env.VSP360_UPLOAD_DIR ? resolve(expandHome(env.VSP360_UPLOAD_DIR)) : undefined,
@@ -90,8 +103,28 @@ function isInside(p: string, dir: string): boolean {
   return p === dir || p.startsWith(dir.endsWith(sep) ? dir : dir + sep);
 }
 
+/** True when a path, relative to where checking starts, has a hidden file or folder in it (.ssh, .env, ...). */
+const hasHidden = (p: string) => p.split(sep).some((seg) => seg.startsWith(".") && seg !== "." && seg !== "..");
+
+/** The real path `p` would have: its deepest existing ancestor with symlinks resolved, plus the rest. */
+function realTarget(p: string): string {
+  let head = p;
+  const rest: string[] = [];
+  while (!existsSync(head) && dirname(head) !== head) {
+    rest.unshift(basename(head));
+    head = dirname(head);
+  }
+  return join(realpathSync(head), ...rest);
+}
+
 /** A problem with the request (file paths, missing body) to report as a failed call rather than a crash. */
 class RequestError extends Error {}
+
+/** A response, or a set of pages, larger than VSP360_MAX_RESPONSE_BYTES. */
+class TooLargeError extends RequestError {}
+
+const MAX_PAGES = 200;
+const MAX_REDIRECTS = 5;
 
 export class Vsp360Client {
   private agent: Agent;
@@ -130,7 +163,13 @@ export class Vsp360Client {
       body: form.toString(),
       dispatcher: this.agent,
       signal: AbortSignal.timeout(this.cfg.timeoutMs),
+      // The request body holds the client secret, so it is never re-sent to wherever a redirect points.
+      redirect: "manual",
     });
+    if (res.status >= 300 && res.status < 400) {
+      await res.body?.cancel();
+      throw new Error(`Token request was redirected (HTTP ${res.status} to ${res.headers.get("location") ?? "no location"}); the client secret is only sent to VSP360_URL. Check that VSP360_URL is the VSP 360 address itself.`);
+    }
     const text = await res.text();
     if (!res.ok) throw new Error(`Token request failed (HTTP ${res.status}): ${text.slice(0, 1000)}`);
     const data = JSON.parse(text);
@@ -174,7 +213,9 @@ export class Vsp360Client {
    * fetched PAGE_CONCURRENCY at a time; otherwise (and for anything after `last`) `next` links are followed in turn.
    */
   private async allPages(op: Operation, url: string, headers: Record<string, string>, args: CallArgs, first: Response): Promise<CallResult> {
-    const firstBody = Buffer.from(await first.arrayBuffer());
+    // One byte budget covers every page, so a long or endless pagination can't exhaust memory.
+    const budget = { left: this.cfg.maxResponseBytes };
+    const firstBody = await this.readAll(first, budget);
     const items = parseArray(firstBody);
     if (!items) return this.renderBuffered(op, first, firstBody, args);
 
@@ -182,15 +223,27 @@ export class Vsp360Client {
     let next = this.followable(relLink(link, url, "next"));
     let pages = 1;
     let stop = "";
-    const maxPages = args.max_pages ?? 20;
+    const maxPages = Math.min(Math.max(Math.trunc(Number(args.max_pages ?? 20)) || 20, 1), MAX_PAGES);
+    const tooLarge = () =>
+      `\n\n[Stopped at page ${pages + 1}: the pages reached VSP360_MAX_RESPONSE_BYTES (${this.cfg.maxResponseBytes} bytes). Showing the ${pages} page(s) before it. Narrow the request with filters.]`;
 
     const planned = next ? pageUrls(url, next, this.followable(relLink(link, url, "last")), maxPages - 1) : [];
     if (planned.length > 1) {
       const fetched = await mapLimit(planned, PAGE_CONCURRENCY, async (u) => {
         const res = await this.send(op, u, headers, args);
-        return { u, res, body: Buffer.from(await res.arrayBuffer()) };
+        try {
+          return { u, res, body: await readBody(res, budget) };
+        } catch (e) {
+          if (e instanceof TooLargeError) return { u, res, body: undefined };
+          throw e;
+        }
       });
       for (const { u, res, body } of fetched) {
+        if (!body) {
+          stop = tooLarge();
+          next = undefined;
+          break;
+        }
         if (!res.ok) return this.renderBuffered(op, res, body, args);
         const data = parseArray(body);
         if (!data) {
@@ -206,7 +259,14 @@ export class Vsp360Client {
 
     while (next && pages < maxPages) {
       const page = await this.send(op, next, headers, args);
-      const body = Buffer.from(await page.arrayBuffer());
+      let body: Buffer;
+      try {
+        body = await readBody(page, budget);
+      } catch (e) {
+        if (!(e instanceof TooLargeError)) throw e;
+        stop = tooLarge();
+        break;
+      }
       if (!page.ok) return this.renderBuffered(op, page, body, args);
       const data = parseArray(body);
       if (!data) {
@@ -241,7 +301,12 @@ export class Vsp360Client {
         if (p.required) throw new Error(`Missing required ${p.in} parameter "${p.name}" for ${op.operationId}`);
         continue;
       }
-      if (p.in === "path") path = path.replace(`{${p.name}}`, encodeURIComponent(String(v)));
+      if (p.in === "path") {
+        // URL normalisation would drop `.` and `..` segments, reaching a different endpoint than the one checked.
+        const s = String(v);
+        if (s === "." || s === ".." || /[\/\\]/.test(s)) throw new Error(`Invalid value for path parameter "${p.name}" of ${op.operationId}: "${s}" (it may not be . or .. or contain / or \\)`);
+        path = path.replace(`{${p.name}}`, encodeURIComponent(s));
+      }
       else if (p.in === "header") headers[p.name] = String(v);
       else if (Array.isArray(v)) v.forEach((x) => query.append(p.name, String(x)));
       else if (typeof v === "object") query.append(p.name, JSON.stringify(v));
@@ -278,7 +343,7 @@ export class Vsp360Client {
     if (this.cfg.uploadDir) {
       const root = existsSync(this.cfg.uploadDir) ? realpathSync(this.cfg.uploadDir) : this.cfg.uploadDir;
       if (!isInside(real, root)) throw new RequestError(`Upload refused: ${full} is outside VSP360_UPLOAD_DIR (${this.cfg.uploadDir}).`);
-    } else if (real.split(sep).some((seg) => seg.startsWith("."))) {
+    } else if (hasHidden(real)) {
       throw new RequestError(`Upload refused: ${full} is a hidden file or inside a hidden folder. Set VSP360_UPLOAD_DIR to choose the folder uploads may come from.`);
     }
     return real;
@@ -313,8 +378,12 @@ export class Vsp360Client {
     return typeof args.body === "string" ? args.body : JSON.stringify(args.body);
   }
 
-  /** Sends the request, retrying once with a fresh token on 401. The body is left unread for the caller. */
-  private async send(op: Operation, url: string, headers: Record<string, string>, args: CallArgs, retried = false): Promise<Response> {
+  /**
+   * Sends the request, retrying once with a fresh token on 401. The body is left unread for the caller.
+   * Redirects are followed only within VSP360_URL's origin, so the token and request body never go elsewhere,
+   * and only for GETs or 307/308 (which keep the method and body); any other redirect is returned as is.
+   */
+  private async send(op: Operation, url: string, headers: Record<string, string>, args: CallArgs, retried = false, hops = 0): Promise<Response> {
     const body = await this.buildBody(op, args);
     const reqHeaders: Record<string, string> = { ...headers, authorization: `Bearer ${await this.getToken(retried)}` };
     if (body !== undefined && !(body instanceof FormData)) reqHeaders["content-type"] = op.bodyContentType!;
@@ -324,10 +393,25 @@ export class Vsp360Client {
       body,
       dispatcher: this.agent,
       signal: isMultipart(op) ? undefined : AbortSignal.timeout(this.cfg.timeoutMs),
+      redirect: "manual",
     });
+    const location = res.status >= 300 && res.status < 400 ? res.headers.get("location") : null;
+    if (location) {
+      const to = new URL(location, url);
+      const origin = new URL(this.cfg.baseUrl).origin;
+      if (to.origin !== origin) {
+        await res.body?.cancel();
+        throw new RequestError(`Redirect refused: VSP 360 redirected ${op.operationId} to ${to.origin}, which is not VSP360_URL (${origin}). Requests and the access token are only sent to VSP360_URL.`);
+      }
+      if (op.method === "GET" || res.status === 307 || res.status === 308) {
+        await res.body?.cancel();
+        if (hops >= MAX_REDIRECTS) throw new RequestError(`Too many redirects for ${op.operationId} (last to ${to})`);
+        return this.send(op, to.toString(), headers, args, retried, hops + 1);
+      }
+    }
     if (res.status === 401 && !retried) {
       await res.body?.cancel();
-      return this.send(op, url, headers, args, true);
+      return this.send(op, url, headers, args, true, hops);
     }
     return res;
   }
@@ -341,6 +425,16 @@ export class Vsp360Client {
     return `HTTP ${res.status} ${res.statusText}${meta.length ? "\n" + meta.join("\n") : ""}`;
   }
 
+  /** Reads a whole response body within `budget`, failing the call with an explanation if it doesn't fit. */
+  private async readAll(res: Response, budget: { left: number }): Promise<Buffer> {
+    try {
+      return await readBody(res, budget);
+    } catch (e) {
+      if (!(e instanceof TooLargeError)) throw e;
+      throw new RequestError(`${this.header(res)}\n\nThe response is larger than VSP360_MAX_RESPONSE_BYTES (${this.cfg.maxResponseBytes} bytes). Narrow the request with filters or limit, or use save_to to write it to a file.`);
+    }
+  }
+
   /** Renders a response whose body has not been read: binary bodies and save_to are streamed to disk. */
   private async render(op: Operation, res: Response, args: CallArgs): Promise<CallResult> {
     const ct = res.headers.get("content-type") ?? "";
@@ -352,7 +446,7 @@ export class Vsp360Client {
       await pipeline(res.body ? Readable.fromWeb(res.body as any) : Readable.from([]), count, createWriteStream(file, { flags: "wx" }));
       return { ok: true, status: res.status, text: `${this.header(res)}\nSaved ${bytes} bytes (${ct || "unknown type"}) to ${file}` };
     }
-    return this.renderBuffered(op, res, Buffer.from(await res.arrayBuffer()), args);
+    return this.renderBuffered(op, res, await this.readAll(res, { left: this.cfg.maxResponseBytes }), args);
   }
 
   /** Renders a response whose body was already read (pagination). */
@@ -384,8 +478,15 @@ export class Vsp360Client {
     if (target) {
       const t = expandHome(target);
       const file = resolve(isAbsolute(t) ? t : join(dir, t));
-      if (!this.cfg.saveAnywhere && !isInside(file, dir)) {
+      // Checked with symlinks resolved, so a symlink inside the folder can't send the write somewhere else.
+      const real = realTarget(file);
+      const root = realTarget(dir);
+      const inside = isInside(real, root);
+      if (!this.cfg.saveAnywhere && !inside) {
         throw new RequestError(`save_to refused: ${file} is outside the download folder ${dir}. Use a file name or a path inside it (or set VSP360_SAVE_ANYWHERE=true).`);
+      }
+      if (hasHidden(inside ? relative(root, real) : real)) {
+        throw new RequestError(`save_to refused: ${file} is a hidden file or inside a hidden folder. Choose a path without hidden folders such as .ssh or .config.`);
       }
       if (existsSync(file)) throw new RequestError(`save_to refused: ${file} already exists. Choose a new file name.`);
       mkdirSync(resolve(file, ".."), { recursive: true });
@@ -404,6 +505,21 @@ export class Vsp360Client {
     if (text.length <= max) return prefix + text;
     return `${prefix}${text.slice(0, max)}\n\n[Truncated: showing ${max} of ${text.length} characters. Use limit/offset or filters to narrow the result, or save_to to write the full response to a file.]`;
   }
+}
+
+/**
+ * Reads a response body, failing with TooLargeError once more than `budget.left` bytes have arrived. The budget
+ * is shared and decremented, so one budget can cover several responses.
+ */
+async function readBody(res: Response, budget: { left: number }): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  if (!res.body) return Buffer.alloc(0);
+  for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
+    budget.left -= chunk.length;
+    if (budget.left < 0) throw new TooLargeError("response too large"); // leaving the loop cancels the stream
+    chunks.push(Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
 }
 
 function parseArray(buf: Buffer): Json[] | undefined {

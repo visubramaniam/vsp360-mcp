@@ -4,6 +4,17 @@
 
 ### Security
 
+These fix findings S3 to S11 of the 2026-10-14 security review in SECURITY.md.
+
+- **Redirects can't send the secret or token elsewhere.** The token request no longer follows redirects, and API requests follow them only within `VSP360_URL`'s origin. (S3)
+- **The directory connection test is treated as a write.** `vsp360VerifyDirectory` makes VSP 360 connect to any LDAP host it's given, so it now needs `VSP360_ALLOW_WRITES=true`. (S4)
+- **`analyticsRunQuery` is a read only with `action=query`.** In read-only mode, other actions, such as aborting queries, are refused. (S5)
+- **The SSO client secret needs `VSP360_ALLOW_SECRET_READS`.** `vsp360RevealBlockSSOSetup` and `vsp360RotateBlockSSOSecret` return a live client secret, so, like `vsp360GetServiceAccountSecret`, they're refused without it. (S6)
+- **`save_to` can't escape through symlinks or write into hidden folders.** The download-folder check resolves symlinks, and paths through hidden folders such as `~/.ssh` are refused, also with `VSP360_SAVE_ANYWHERE=true`. (S7)
+- **Path parameters can't be `.` or `..` or contain `/` or `\`.** (S8)
+- **Response size is limited.** At most `VSP360_MAX_RESPONSE_BYTES` (64 MiB) is read into memory from one response, or from all pages of an `all_pages` call, and `max_pages` is capped at 200. `save_to` still streams any size to disk. (S9)
+- **`http://` URLs need an opt-in.** An `http://` `VSP360_URL` is refused unless `VSP360_ALLOW_HTTP=true`. **If you use one, set it before upgrading.** (S10)
+- **Pinned build inputs.** GitHub Actions are pinned by commit SHA and the Docker base image by digest. The Node.js runtime in the standalone packages is checked against its release's signed `SHASUMS256.txt`. Dependabot opens weekly updates for npm packages, actions and the base image. (S11)
 - **No dependency alerts.** `@anthropic-ai/mcpb`, the tool that packs the Claude Desktop extension, is no longer a dev dependency: `npm run package` runs it with `npx`, pinned to 2.1.2. Its dependencies with advisories, `node-forge` (signing) and `tmp` (interactive prompts), aren't used by `mcpb pack` and are no longer in the repository's lockfile, which closes Dependabot alerts #1, #9 and #28. `npm audit` reports no vulnerabilities. (SECURITY.md D3)
 
 ### Changed

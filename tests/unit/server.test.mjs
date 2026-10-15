@@ -38,7 +38,7 @@ test("reports the package version", async () => {
 test("read-only mode refuses every write operation before any request is made", async () => {
   const c = await server();
   const writes = [...spec.operations.values()].filter((o) => !o.readOnly);
-  assert.equal(writes.length, 124);
+  assert.equal(writes.length, 125);
   for (const op of writes) {
     const r = await c.callTool({ name: "vsp360_call_operation", arguments: { operationId: op.operationId } });
     assert.ok(r.isError, op.operationId);
@@ -53,6 +53,27 @@ test("the secret read is refused unless VSP360_ALLOW_SECRET_READS is set", async
   assert.match(textOf(r), /VSP360_ALLOW_SECRET_READS/);
   const d = await c.callTool({ name: "vsp360_describe_operation", arguments: { operationId: "vsp360GetServiceAccountSecret" } });
   assert.match(textOf(d), /returns a secret \(blocked/);
+});
+
+test("the SSO operations that return a client secret also need VSP360_ALLOW_SECRET_READS (SECURITY.md S6)", async () => {
+  const c = await server({ VSP360_ALLOW_WRITES: "true" });
+  for (const operationId of ["vsp360RevealBlockSSOSetup", "vsp360RotateBlockSSOSecret"]) {
+    const r = await c.callTool({ name: "vsp360_call_operation", arguments: { operationId, params: { id: "a" } } });
+    assert.ok(r.isError, operationId);
+    assert.match(textOf(r), /VSP360_ALLOW_SECRET_READS/, operationId);
+    const d = await c.callTool({ name: "vsp360_describe_operation", arguments: { operationId } });
+    assert.match(textOf(d), /write, returns a secret \(blocked/, operationId);
+  }
+});
+
+test("read-only mode allows analyticsRunQuery only with action=query (SECURITY.md S5)", async () => {
+  const c = await server();
+  const call = (action) => c.callTool({ name: "vsp360_call_operation", arguments: { operationId: "analyticsRunQuery", params: { action, dataset: "defaultDs" }, body: "select * from raidPool" } });
+  const other = await call("abort");
+  assert.ok(other.isError);
+  assert.match(textOf(other), /read-only only with action=query/);
+  // A query gets past the server's checks and fails only because the address doesn't exist.
+  assert.doesNotMatch(textOf(await call("query")), /read-only/);
 });
 
 test("read-only mode refuses uploads unless VSP360_UPLOAD_DIR is set", async () => {
@@ -110,10 +131,10 @@ test("direct tools exclude writes and the secret read in read-only mode, and all
   assert.match(textOf(call), /Unknown tool/);
 });
 
-test("with writes allowed, every operation except the secret read is a direct tool", async () => {
+test("with writes allowed, every operation except the three that return a secret is a direct tool", async () => {
   const c = await server({ VSP360_TOOLSETS: "all", VSP360_ALLOW_WRITES: "true" });
   const { tools } = await c.listTools();
-  assert.equal(tools.length, 3 + 263);
+  assert.equal(tools.length, 3 + 261);
 });
 
 test("arguments of the wrong type return a result, not a crash", async () => {

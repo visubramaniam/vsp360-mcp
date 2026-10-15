@@ -75,6 +75,17 @@ function blockedReason(op: Operation): string | undefined {
   return undefined;
 }
 
+/** Why a call may not be made with these arguments, for operations that are only read-only with some of them. */
+function blockedArgs(op: Operation, params: Record<string, unknown>): string | undefined {
+  if (!op.readOnlyParams || cfg.allowWrites) return undefined;
+  for (const [name, value] of Object.entries(op.readOnlyParams)) {
+    if (params[name] !== value) {
+      return `${op.operationId} is read-only only with ${name}=${value}, and the server is running read-only. Set VSP360_ALLOW_WRITES=true in the MCP server configuration to allow other values.`;
+    }
+  }
+  return undefined;
+}
+
 const directOps = new Map<string, Operation>();
 const wanted = cfg.toolsets.map((t) => t.toLowerCase());
 for (const op of spec.operations.values()) {
@@ -99,8 +110,11 @@ const unknownOperation = (id: unknown) => text(`Unknown operationId "${str(id)}"
 
 function accessLabel(op: Operation): string {
   const blocked = blockedReason(op);
-  if (op.secret) return blocked ? "read, returns a secret (blocked: set VSP360_ALLOW_SECRET_READS=true)" : "read, returns a secret";
-  if (!op.readOnly) return blocked ? "write (blocked: server is read-only; set VSP360_ALLOW_WRITES=true)" : "write";
+  if (!op.readOnly && !cfg.allowWrites) return op.secret ? "write, returns a secret (blocked: server is read-only; set VSP360_ALLOW_WRITES=true)" : "write (blocked: server is read-only; set VSP360_ALLOW_WRITES=true)";
+  const kind = op.readOnly ? "read" : "write";
+  if (op.secret) return blocked ? `${kind}, returns a secret (blocked: set VSP360_ALLOW_SECRET_READS=true)` : `${kind}, returns a secret`;
+  if (!op.readOnly) return "write";
+  if (op.readOnlyParams && !cfg.allowWrites) return `read only with ${Object.entries(op.readOnlyParams).map(([k, v]) => `${k}=${v}`).join(", ")}`;
   return blocked ? "read, uploads a file (blocked: set VSP360_UPLOAD_DIR)" : "read";
 }
 
@@ -232,7 +246,7 @@ async function runOperation(op: Operation, args: CallArgs, via: "meta" | "direct
   }
   const argNames = [...Object.keys(args.params ?? {}), ...(args.body !== undefined ? ["body"] : []), ...(args.files ? ["files"] : [])];
   const logged = decisions.call({ operationId: op.operationId, via, argNames });
-  const blocked = blockedReason(op);
+  const blocked = blockedReason(op) ?? blockedArgs(op, args.params ?? {});
   if (blocked) {
     logged({ status: 0, ok: false, blocked: true });
     return text(blocked, true);
