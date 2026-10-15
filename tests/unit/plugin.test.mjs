@@ -27,5 +27,10 @@ test("the plugin folder has what the directory requires", () => {
   const words = read("plugin/README.md").replace(/```[\s\S]*?```/g, "").split(/\s+/).filter(Boolean).length;
   assert.ok(words >= 40, "README has at least 40 words outside code blocks");
   assert.ok(existsSync(new URL("../../plugin/LICENSE", import.meta.url)));
+  // The listing icon: a square PNG of 512-2048 px under 2 MB, at the path the directory reads.
+  const icon = readFileSync(new URL("../../plugin/.claude-plugin/icon.png", import.meta.url));
+  assert.equal(icon.subarray(1, 4).toString(), "PNG");
+  const [w, h] = [icon.readUInt32BE(16), icon.readUInt32BE(20)];
+  assert.ok(w === h && w >= 512 && w <= 2048 && icon.length < 2 * 1024 * 1024, `icon is ${w}x${h}, ${icon.length} bytes`);
   assert.match(plugin.name, /^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$/);
 });
