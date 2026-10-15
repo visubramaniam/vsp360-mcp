@@ -100,7 +100,7 @@ After the upgrades, `npm audit --omit=dev` reports no vulnerabilities in the run
 |---|---|---|---|---|---|
 | D1 | `undici` 7.16.0 | At runtime, for every VSP 360 request | High (25 advisories), **fixed in 0.1.17** | Mostly in features the server doesn't use (WebSockets, caching, cookies, retry interceptors). The ones that apply are unbounded decompression of responses (GHSA-g9mf-h72j-4rw9, GHSA-3xpg-4rpp-hhhm), which lets VSP 360, or anything that can tamper with its responses, exhaust memory. | Upgraded to 7.30.0 |
 | D2 | `yaml` 2.8.1 | At runtime, to parse the spec | Moderate (GHSA-48c2-rrv3-qjmp), **fixed in 0.1.17** | Only matters if `VSP360_SPEC` points at an untrusted file | Upgraded to 2.9.1 |
-| D3 | `node-forge`, `tmp` (via `@anthropic-ai/mcpb`) | At build time only | High | Not shipped in any package; used only when packing the `.mcpb` | Track upstream; no fix published for `node-forge` yet |
+| D3 | `node-forge`, `tmp` (via `@anthropic-ai/mcpb`) | At build time only | High, **fixed in 0.1.22** | Not shipped in any package; used only when packing the `.mcpb`, and `mcpb pack` uses neither | `mcpb` is no longer a dev dependency: the packaging script runs it with `npx`, pinned to 2.1.2, so neither package is in the repository's lockfile. `npm audit` reports no vulnerabilities |
 
 ### Controls verified as working
 

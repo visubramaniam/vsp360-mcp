@@ -23,6 +23,8 @@ const stage = join(out, ".stage");
 const cache = join(out, ".cache");
 const { version } = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 const NODE_VERSION = process.env.NODE_RUNTIME_VERSION || "24.21.0";
+// The Claude Desktop extension packer, run with npx at build time.
+const MCPB = "@anthropic-ai/mcpb@2.1.2";
 
 // Standalone platforms, named as Node.js names its downloads.
 const TARGETS = ["darwin-arm64", "darwin-x64", "linux-x64", "linux-arm64", "win-x64", "win-arm64"];
@@ -68,7 +70,9 @@ function buildMcpb(app) {
   cpSync(app, dir, { recursive: true });
   const manifest = JSON.parse(readFileSync(join(root, "packaging", "mcpb", "manifest.json"), "utf8"));
   writeFileSync(join(dir, "manifest.json"), JSON.stringify({ ...manifest, version }, null, 2) + "\n");
-  run(join(root, "node_modules", ".bin", "mcpb"), ["pack", dir, join(out, `vsp360-mcp-${version}.mcpb`)]);
+  // mcpb runs through npx, pinned, rather than as a dev dependency: its own dependencies (node-forge for signing,
+  // tmp for interactive prompts) have security advisories, and `mcpb pack` uses neither.
+  run("npx", ["--yes", MCPB, "pack", dir, join(out, `vsp360-mcp-${version}.mcpb`)]);
 }
 
 /** Downloads a Node.js release archive once and checks it against the release's SHASUMS256.txt. */
