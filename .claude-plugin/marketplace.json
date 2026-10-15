@@ -1,0 +1,17 @@
+{
+  "name": "vsp360-community",
+  "owner": {
+    "name": "Vinod Subramaniam",
+    "url": "https://github.com/visubramaniam"
+  },
+  "metadata": {
+    "description": "Community MCP server for Hitachi VSP 360, as a Claude plugin. Not an official Hitachi Vantara product."
+  },
+  "plugins": [
+    {
+      "name": "vsp360-community",
+      "source": "./plugin",
+      "description": "Query Hitachi VSP 360 alerts, inventory, capacity and performance through its REST API. Read-only by default."
+    }
+  ]
+}

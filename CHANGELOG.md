@@ -11,6 +11,10 @@
 
 - **Named as a community project.** The README, package description, Docker image labels and Claude Desktop extension now call vsp360-mcp a "Community MCP server for Hitachi VSP 360" and say it isn't an official Hitachi Vantara product. The extension shows as **Hitachi VSP 360 (Community)** in Claude Desktop's settings.
 
+### Added
+
+- **Claude plugin, `vsp360-community`** (`plugin/`). It runs the server with `npx vsp360-mcp@<version>`, asks for the VSP 360 settings (the client secret goes to the system's secure credential store), and adds two skills: capacity and performance reports via Analytics, and a platform health check. Install it in Claude Code with `/plugin install vsp360-community --marketplace visubramaniam/vsp360-mcp`; the repository's `.claude-plugin/marketplace.json` lists it. It's ready to submit to Anthropic's plugin directory. A unit test keeps its pinned version in step with `package.json`.
+
 ## 0.1.19 — 2026-10-15
 
 ### Changed
