@@ -25,7 +25,8 @@ jobs:
 
   package:
     # Builds the npm package, the Claude Desktop extension and one standalone package to catch packaging breakage
-    # early. The standalone build checks the signature of the Node.js runtime's SHASUMS256.txt.
+    # early. The standalone build checks the signature of the Node.js runtime's SHASUMS256.txt, and the
+    # package is then smoke-tested against a mock VSP 360, as the Release workflow does for the Windows packages.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -35,3 +36,8 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run package -- --targets linux-x64
+      - name: Smoke-test the standalone package
+        run: |
+          version=$(node -p 'require("./package.json").version')
+          tar -xzf "release/vsp360-mcp-$version-linux-x64.tar.gz" -C release
+          node tests/smoke/package-smoke.mjs "release/vsp360-mcp-$version-linux-x64" "$version"
