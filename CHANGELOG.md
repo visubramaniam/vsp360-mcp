@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fixed
+
+- **Docker builds no longer hang under emulation.** The image's build and dependency stages now run on the build machine's own platform and only the final stage is per platform, so multi-arch builds don't run `npm` under QEMU. In the 0.1.19 release, `npm ci` crashed there (SIGILL) and the build hung. The Release workflow's Docker job also stops after 30 minutes instead of hanging.
+- **Docker actions on Node.js 24.** The Release workflow uses `docker/setup-qemu-action@v4`, `docker/setup-buildx-action@v4`, `docker/login-action@v4` and `docker/build-push-action@v7`, which run on Node.js 24, instead of the versions GitHub was forcing off its deprecated Node.js 20.
+
 ### Security
 
 - **No real environment data in the repository (SECURITY.md S2).** Six report files with live VSP 360 data are no longer tracked, and `reports/` is ignored except `reports/decisions.jsonl`. Array names, serial numbers, and application and policy names in the test questions and an MQL example are replaced with placeholders. Earlier commits still contain the data.
