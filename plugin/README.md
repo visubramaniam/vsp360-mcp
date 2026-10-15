@@ -27,7 +27,7 @@ The MCP server runs locally on your computer, so the plugin works in **Claude Co
 
 ## Requirements
 
-- **Node.js 20 or later.** The server is started with `npx`.
+- **Node.js 20 or later, with npm.** Claude Code uses npm to install the server's packages from the plugin's lockfile, and Node.js runs the server.
 - **A VSP 360 service account** with the access you need. `admin` covers alerts, logs and system operations; for devices, add the account to a group whose access policy covers the device types.
 - **HTTPS access** from your computer to VSP 360.
 
@@ -49,7 +49,8 @@ When you enable the plugin, Claude Code asks for:
 
 ## What it runs, sends and stores
 
-- **Runs:** `npx -y vsp360-mcp@<version>`. On first use, npm downloads that exact package and its dependencies from the npm registry.
+- **Installs:** when you install or update the plugin, Claude Code installs the packages listed in `package-lock.json`: the [`vsp360-mcp`](https://www.npmjs.com/package/vsp360-mcp) package and its dependencies, each pinned to an exact version with an integrity hash, from the npm registry and without running any install scripts.
+- **Runs:** `node ${CLAUDE_PLUGIN_ROOT}/node_modules/vsp360-mcp/dist/index.js`, the installed server. It downloads nothing when it starts.
 - **Sends:** requests only to the VSP 360 URL you configure. It signs in with the service account's client ID and secret (OAuth client credentials) and sends the API requests Claude makes. Nothing is sent to the plugin's author or any other third party.
 - **Returns to Claude:** the API responses, which become part of your conversation with Claude and are handled under your Claude account's terms.
 - **Stores:** files you ask it to download or save, in the download folder. It keeps no other data. An optional local decision log is off unless you configure it outside the plugin.

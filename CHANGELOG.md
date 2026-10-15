@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- **The plugin installs its server from a lockfile instead of `npx`.** `plugin/package.json` and `plugin/package-lock.json` pin `vsp360-mcp` and all 97 of its dependencies to exact versions with integrity hashes. Claude Code installs them when the plugin is installed or updated, without install scripts, and the plugin runs the server with `node` from there. Nothing is downloaded at each start, and the plugin meets the directory's lockfile requirement for its Verified badge. After each release, a follow-up pull request moves the plugin to the new version.
+
 ### Added
 
 - **Plugin listing icon** (`plugin/.claude-plugin/icon.png`): a neutral storage-and-chat icon for the `vsp360-community` listing in Anthropic's plugin directory, with no Hitachi branding.
