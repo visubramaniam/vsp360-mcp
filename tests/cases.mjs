@@ -62,6 +62,8 @@ export const HELD_OUT = [
 
 // Second held-out set: written and committed before the example-question index
 // existed, phrased the way an operator would ask, and never used for tuning.
+// One request ("migrate volumes to a new array without downtime") was removed when the Platform spec dropped
+// orchestrationExecuteNdm, its only answer.
 export const HELD_OUT_2 = [
   ["who changed the snapshot schedule last week", ["protectionListPolicyAudit"]],
   ["mount a snapshot to a host for restore testing", ["protectionMountCopy"]],
@@ -82,7 +84,6 @@ export const HELD_OUT_2 = [
   ["onboard an hnas file server", ["vsp360PostExternalAppsByAppTypeOnboard"]],
   ["tag a storage system with its site name", ["vsp360PatchDevicesByIdTags"]],
   ["history of changes for array serial 840477", ["vsp360GetDevicesReport"]],
-  ["migrate volumes to a new array without downtime", ["orchestrationExecuteNdm"]],
   ["remove a lun from a host", ["orchestrationExecuteUnassignLun"]],
   ["is there enough cluster capacity to apply the upgrade", ["vsp360GetUpgradesResourcesValidate"]],
   ["switch the deployment to the large profile", ["vsp360PostProfileSwitches"]],

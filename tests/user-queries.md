@@ -280,7 +280,7 @@ Each question is labelled with the answer a good search should lead to: one or m
 | 75 | Run the workflow to configure a new Global Active Device (GAD) active-active volume pair. | `orchestrationExecuteGadExistingVolumeExistingServer`, `orchestrationExecuteGadNewVolumeNewServer` | test |
 | 76 | Expand host group `ESXi-Cluster-01` by adding FC WWN `21:00:00:24:ff:aa:01:02`. | not available in the API | test |
 | 77 | Show all failed workflow executions in the past 7 days and their failure step details. | not available in the API | test |
-| 78 | Execute the automated Non-Disruptive Migration (NDM) cutover step for `vol-legacy-01`. | `orchestrationExecuteNdm` | test |
+| 78 | Execute the automated Non-Disruptive Migration (NDM) cutover step for `vol-legacy-01`. | not available in the API | test |
 | 79 | Cancel the currently running provisioning job `job-7734`. | not available in the API | train |
 
 ### Analytics & Custom Telemetry Queries

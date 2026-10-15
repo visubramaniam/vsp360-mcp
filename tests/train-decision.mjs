@@ -12,7 +12,7 @@ import { OperationIndex, hintFor } from "../dist/search.js";
 import { FEATURES, DECISIONS, features, predict } from "../dist/decision.js";
 import { CASES, HELD_OUT, HELD_OUT_2, USER_QUESTIONS } from "./cases.mjs";
 
-const spec = new Spec(new URL("../spec/vsp360-openapi.yaml", import.meta.url).pathname);
+const spec = new Spec(new URL("../spec/Platform-vsp360-openapi.yaml", import.meta.url).pathname);
 const examples = JSON.parse(readFileSync(new URL("../spec/examples.json", import.meta.url), "utf8"));
 const index = new OperationIndex(spec.operations.values(), examples);
 

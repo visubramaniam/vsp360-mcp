@@ -10,7 +10,7 @@ import { Spec } from "../../dist/spec.js";
 import { Vsp360Client, loadConfig } from "../../dist/client.js";
 
 const BASE = "https://vsp.test";
-const spec = new Spec(new URL("../../spec/vsp360-openapi.yaml", import.meta.url).pathname);
+const spec = new Spec(new URL("../../spec/Platform-vsp360-openapi.yaml", import.meta.url).pathname);
 const op = (id) => spec.operations.get(id);
 
 let dir, mock, pool, client, tokenRequests;

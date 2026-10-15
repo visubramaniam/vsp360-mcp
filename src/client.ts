@@ -27,8 +27,9 @@ interface Config {
   pathRewrites: [string, string][];
 }
 
-// The spec documents some application APIs without the gateway prefix they are
-// actually served under, e.g. Data Protection lives at /dataprotection/api/v1/protection.
+// The Data Protection service's pagination links leave out the gateway prefix it is served under:
+// `next` points at /api/v1/protection/... (over http) rather than /dataprotection/api/v1/protection/...
+// The rewrite re-homes those links. It also covers specs older than the Platform spec, whose paths lacked the prefix.
 const DEFAULT_PATH_REWRITES = "/api/v1/protection=/dataprotection/api/v1/protection";
 
 function parseRewrites(spec: string): [string, string][] {

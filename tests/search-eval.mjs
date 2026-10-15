@@ -8,15 +8,17 @@ import { Spec } from "../dist/spec.js";
 import { OperationIndex, hintFor } from "../dist/search.js";
 import { CASES, HELD_OUT, HELD_OUT_2, USER_QUESTIONS } from "./cases.mjs";
 
-// Minimum scores. Raise them when search improves; never lower them to make a change pass.
+// Minimum scores. Raise them when search improves; never lower them to make a change pass. They were re-based
+// once, for the Platform spec, because what is measured changed: NDM was removed (one held-out request dropped,
+// labelled question #78 became "not available"), and spec text changes moved #113's answer from 3rd to 4th.
 const THRESHOLDS = {
   "Tuning set": { top1: 32, top3: 38 },
   "Held-out set": { top1: 11, top3: 15 },
   "Held-out set 2": { top1: 17, top3: 25 },
-  user: { opTop1: 31, opTop3: 40, analytics: 14, noneNotHigh: 6 },
+  user: { opTop1: 30, opTop3: 38, analytics: 14, noneNotHigh: 7 },
 };
 
-const spec = new Spec(new URL("../spec/vsp360-openapi.yaml", import.meta.url).pathname);
+const spec = new Spec(new URL("../spec/Platform-vsp360-openapi.yaml", import.meta.url).pathname);
 const ops = [...spec.operations.values()];
 for (const [, want] of [...CASES, ...HELD_OUT, ...HELD_OUT_2]) for (const id of want) if (!spec.operations.has(id)) throw new Error(`Unknown expected id ${id}`);
 const examples = JSON.parse(readFileSync(new URL("../spec/examples.json", import.meta.url), "utf8"));

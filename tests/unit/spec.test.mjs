@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Spec, toolParamName } from "../../dist/spec.js";
 
-const spec = new Spec(new URL("../../spec/vsp360-openapi.yaml", import.meta.url).pathname);
+const spec = new Spec(new URL("../../spec/Platform-vsp360-openapi.yaml", import.meta.url).pathname);
 
 test("indexes 264 operations, hides the token endpoint, and flags exactly one secret read", () => {
   assert.equal(spec.operations.size, 264);

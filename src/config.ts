@@ -44,7 +44,7 @@ export interface ServerConfig {
 
 export function loadServerConfig(env = process.env): ServerConfig {
   return {
-    specPath: env.VSP360_SPEC || bundled("spec", "vsp360-openapi.yaml"),
+    specPath: env.VSP360_SPEC || bundled("spec", "Platform-vsp360-openapi.yaml"),
     allowWrites: env.VSP360_ALLOW_WRITES === "true",
     allowSecretReads: env.VSP360_ALLOW_SECRET_READS === "true",
     toolsets: (env.VSP360_TOOLSETS ?? "").split(",").map((s) => s.trim()).filter(Boolean),

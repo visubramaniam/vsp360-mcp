@@ -1,6 +1,6 @@
 # vsp360-mcp
 
-An MCP server for the **Hitachi VSP 360 1.4 REST API**, built from `spec/vsp360-openapi.yaml`. It gives Claude (or any other MCP client) access to all 264 API operations. The token endpoint is excluded because the server handles authentication itself.
+An MCP server for the **Hitachi VSP 360 1.4 REST API**, built from the Platform OpenAPI spec `spec/Platform-vsp360-openapi.yaml`. It gives Claude (or any other MCP client) access to all 264 API operations. The token endpoint is excluded because the server handles authentication itself.
 
 ## How it exposes the API
 
@@ -67,7 +67,7 @@ By default only `GET` operations are allowed, plus a few `POST` operations that 
 - upgrade version validation
 - directory connection test
 
-All other operations are refused, and direct tools are not created for them. These include device registration and deletion, orchestration workflows (volume allocation, GAD, NDM), user and group changes, certificates, upgrades and notifications. To allow them, set `VSP360_ALLOW_WRITES=true`. `DELETE` tools are marked `destructiveHint`, so Claude asks for confirmation before running them.
+All other operations are refused, and direct tools are not created for them. These include device registration and deletion, orchestration workflows (volume allocation, expansion, GAD), user and group changes, certificates, upgrades and notifications. To allow them, set `VSP360_ALLOW_WRITES=true`. `DELETE` tools are marked `destructiveHint`, so Claude asks for confirmation before running them.
 
 **Reads that return secrets.** One read, `vsp360GetServiceAccountSecret`, returns a service account's live client secret, which would then become part of the conversation. Every other read masks secrets. That read is refused, whether or not writes are allowed, unless `VSP360_ALLOW_SECRET_READS=true`.
 
@@ -171,7 +171,7 @@ To try the tools interactively, run `npm run inspect`. It opens the MCP Inspecto
 | `VSP360_DOWNLOAD_DIR` | `~/Downloads/vsp360-mcp` | Where binary downloads and `save_to` files are written |
 | `VSP360_SAVE_ANYWHERE` | `false` | Let `save_to` write outside `VSP360_DOWNLOAD_DIR` |
 | `VSP360_UPLOAD_DIR` | *(any non-hidden path)* | Only allow uploads from inside this folder |
-| `VSP360_PATH_REWRITES` | `/api/v1/protection=/dataprotection/api/v1/protection` | Gateway prefixes the spec leaves out, as comma-separated `/from=/to` pairs. The default makes the Data Protection operations reach `/dataprotection/...`. |
+| `VSP360_PATH_REWRITES` | `/api/v1/protection=/dataprotection/api/v1/protection` | Path prefixes to rewrite, as comma-separated `/from=/to` pairs. The Data Protection service's pagination (`next`) links leave out its `/dataprotection` gateway prefix; the default puts it back. It also lets older specs without the prefix work. |
 | `VSP360_ANALYTICS_FIELDS` | bundled `spec/analytics-fields.json` | MQL resource types and attributes added to `analyticsRunQuery`'s description. |
 | `VSP360_EXAMPLES` | bundled `spec/examples.json` | Example user questions per operation, used to rank search results. Set to an empty string to turn them off. |
 | `VSP360_SPEC` | bundled spec | Path to a different OpenAPI file, e.g. a newer VSP 360 release |
@@ -193,7 +193,7 @@ Users · Groups · Group Access · Service Accounts · Roles · Identity Provide
 
 ## Updating for a new VSP 360 release
 
-Replace `spec/vsp360-openapi.yaml` and restart the server. No code is generated from the spec, so nothing needs rebuilding. If the new release adds `POST` operations that only read data, add them to `READ_ONLY_POSTS` in `src/spec.ts`.
+Replace `spec/Platform-vsp360-openapi.yaml` (or point `VSP360_SPEC` at the new file) and restart the server. No code is generated from the spec, so nothing needs rebuilding. If the new release adds `POST` operations that only read data, add them to `READ_ONLY_POSTS` in `src/spec.ts`.
 
 ## License
 

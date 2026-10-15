@@ -8,7 +8,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { Spec } from "../../dist/spec.js";
 
 const SERVER = new URL("../../dist/index.js", import.meta.url).pathname;
-const spec = new Spec(new URL("../../spec/vsp360-openapi.yaml", import.meta.url).pathname);
+const spec = new Spec(new URL("../../spec/Platform-vsp360-openapi.yaml", import.meta.url).pathname);
 const version = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version;
 const open = [];
 
@@ -36,7 +36,7 @@ test("reports the package version", async () => {
 test("read-only mode refuses every write operation before any request is made", async () => {
   const c = await server();
   const writes = [...spec.operations.values()].filter((o) => !o.readOnly);
-  assert.equal(writes.length, 125);
+  assert.equal(writes.length, 124);
   for (const op of writes) {
     const r = await c.callTool({ name: "vsp360_call_operation", arguments: { operationId: op.operationId } });
     assert.ok(r.isError, op.operationId);
