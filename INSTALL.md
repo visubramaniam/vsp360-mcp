@@ -62,6 +62,7 @@ Get-FileHash .\vsp360-mcp-0.1.16-win-x64.zip -Algorithm SHA256
    - **Allow writes**: leave off for read-only access.
    - **CA certificate** or **Skip TLS verification**, if needed (see [Before you start](#before-you-start)).
    - **Download folder**: where downloaded files are saved. The default is `~/Downloads/vsp360-mcp`.
+   - **Upload folder**: the only folder files may be uploaded from, such as bulk-registration CSVs. In read-only mode, uploads are refused unless it's set.
 4. Enable the extension.
 
 The extension runs with the Node.js built into Claude Desktop. To change a setting later, go to **Settings → Extensions → Hitachi VSP 360**.
