@@ -56,6 +56,15 @@ When you enable the plugin, Claude Code asks for:
 - **Stores:** files you ask it to download or save, in the download folder. It keeps no other data. An optional local decision log is off unless you configure it outside the plugin.
 - **Credentials:** never written to logs, tool output or files.
 
+## Package sources
+
+Everything the plugin installs comes from the **public npm registry** (`https://registry.npmjs.org`). No private registry, proxy, mirror or alternative package source is used.
+
+- **What's installed:** `package-lock.json` in this folder pins `vsp360-mcp` and its 97 dependencies to exact versions. Each entry has a `https://registry.npmjs.org/…` download URL and a `sha512` integrity hash. None has an install script.
+- **No registry configuration:** there's no `.npmrc`, `bunfig.toml` or `.yarnrc` in this folder or anywhere in the repository. `package.json` has no `overrides`, `resolutions` or `workspaces`.
+- **The files above this folder:** the repository root also has a `package.json` and `package-lock.json`. They belong to the server's own source code, for building and testing it, and aren't used by the plugin's install. They also resolve only from `https://registry.npmjs.org`, with integrity hashes, and set no overrides, resolutions or workspaces.
+- **Where the package comes from:** `vsp360-mcp` is published to npm from this repository by its Release workflow, with npm trusted publishing. Each version carries a signed [provenance attestation](https://www.npmjs.com/package/vsp360-mcp) linking it to the commit and workflow run that built it.
+
 ## Safety
 
 - **Read-only by default.** Operations that change VSP 360 are refused before any request is sent unless you turn on **Allow writes**.
