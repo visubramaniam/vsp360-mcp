@@ -55,6 +55,13 @@ test("the secret read is refused unless VSP360_ALLOW_SECRET_READS is set", async
   assert.match(textOf(d), /returns a secret \(blocked/);
 });
 
+test("optional settings left as unfilled ${user_config.x} placeholders are treated as unset", async () => {
+  const c = await server({ VSP360_CA_CERT: "${user_config.ca_cert}", VSP360_DOWNLOAD_DIR: "${user_config.download_dir}" });
+  const r = await c.callTool({ name: "vsp360_call_operation", arguments: { operationId: "vsp360GetDevicesInventory" } });
+  assert.ok(r.isError);
+  assert.doesNotMatch(textOf(r), /user_config|ENOENT/);
+});
+
 test("read-only mode refuses uploads unless VSP360_UPLOAD_DIR is set", async () => {
   const id = "vsp360PostDevicesEnrollmentTemplateValidate";
   const args = { operationId: id, params: { deviceType: "Storage" }, files: { file: SERVER } };

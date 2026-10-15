@@ -13,7 +13,7 @@ import { OperationIndex, hintFor } from "./search.js";
 import { DecisionLog } from "./decisionlog.js";
 import { AnalyticsFields } from "./analyticsfields.js";
 import { features as decisionFeatures, predict, type Decision, type DecisionModel } from "./decision.js";
-import { VERSION, loadServerConfig, loadOptionalJson } from "./config.js";
+import { VERSION, loadServerConfig, loadOptionalJson, dropUnfilledSettings } from "./config.js";
 import { metaTools, directTool, toolName } from "./tools.js";
 
 type Json = any;
@@ -29,6 +29,7 @@ function orExit<T>(load: () => T): T {
   }
 }
 
+dropUnfilledSettings();
 const cfg = loadServerConfig();
 const spec = orExit(() => new Spec(cfg.specPath));
 const examples = orExit(() => loadOptionalJson<Record<string, string[]>>(cfg.examplesPath, "example questions", {}));
