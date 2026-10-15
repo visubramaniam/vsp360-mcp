@@ -42,6 +42,7 @@ const mock = createServer((req, res) => {
   }
 });
 await new Promise((r) => mock.listen(0, "127.0.0.1", r));
+// The mock is plain HTTP on loopback, so the server needs VSP360_ALLOW_HTTP=true to reach it.
 const base = `http://127.0.0.1:${mock.address().port}`;
 
 /** Runs one MCP session against the server started by `command`, returning the responses by id and stderr. */
@@ -50,7 +51,7 @@ function session(label, command, args, options, requests) {
     const downloads = mkdtempSync(join(tmpdir(), "vsp360 smoke "));
     const child = spawn(command, args, {
       ...options,
-      env: { ...process.env, VSP360_URL: base, VSP360_CLIENT_ID: "smoke", VSP360_CLIENT_SECRET: "smoke", VSP360_DOWNLOAD_DIR: downloads },
+      env: { ...process.env, VSP360_URL: base, VSP360_ALLOW_HTTP: "true", VSP360_CLIENT_ID: "smoke", VSP360_CLIENT_SECRET: "smoke", VSP360_DOWNLOAD_DIR: downloads },
     });
     const responses = new Map();
     let out = "", err = "";
