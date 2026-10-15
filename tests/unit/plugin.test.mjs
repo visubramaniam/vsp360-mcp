@@ -40,6 +40,22 @@ test("the lockfile meets the directory's and Claude Code's install rules", () =>
   }
 });
 
+test("every package, in the plugin and the repository root, comes from the public npm registry", () => {
+  // The plugin README's "Package sources" note states this; the directory's reviewers rely on it.
+  const root = JSON.parse(read("package-lock.json"));
+  for (const [name, lockfile] of [["plugin/package-lock.json", lock], ["package-lock.json", root]]) {
+    for (const [path, entry] of Object.entries(lockfile.packages)) {
+      if (!path || !entry.resolved) continue;
+      assert.match(entry.resolved, /^https:\/\/registry\.npmjs\.org\//, `${name}: ${path}`);
+      assert.match(entry.integrity ?? "", /^sha512-/, `${name}: ${path} has an integrity hash`);
+    }
+  }
+  for (const key of ["overrides", "resolutions", "workspaces"]) assert.ok(!(key in pkg), `package.json has no ${key}`);
+  for (const file of [".npmrc", "bunfig.toml", ".yarnrc", ".yarnrc.yml", "plugin/.npmrc", "plugin/bunfig.toml"]) {
+    assert.ok(!existsSync(new URL(`../../${file}`, import.meta.url)), `${file} doesn't exist`);
+  }
+});
+
 test("every ${user_config.*} reference is declared, and the secret is sensitive", () => {
   const refs = [...JSON.stringify(server).matchAll(/\$\{user_config\.(\w+)\}/g)].map((m) => m[1]);
   for (const key of refs) assert.ok(plugin.userConfig[key], `userConfig.${key} is declared`);

@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **The plugin README explains its package sources:** every package comes from the public npm registry with an integrity hash, there's no registry configuration, and the repository root's `package.json` and lockfile belong to the server's source rather than the plugin install. This is for the directory reviewers' "custom registry or package source" check. A test keeps it true.
+
 - **The plugin installs its server from a lockfile instead of `npx`.** `plugin/package.json` and `plugin/package-lock.json` pin `vsp360-mcp` and all 97 of its dependencies to exact versions with integrity hashes. Claude Code installs them when the plugin is installed or updated, without install scripts, and the plugin runs the server with `node` from there. Nothing is downloaded at each start, and the plugin meets the directory's lockfile requirement for its Verified badge. After each release, a follow-up pull request moves the plugin to the new version.
 
 ### Added
