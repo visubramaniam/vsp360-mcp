@@ -123,21 +123,23 @@ Then install the server in one of these ways. Each [GitHub release](https://gith
 |---|---|---|
 | `vsp360-mcp-<version>.mcpb` | Claude Desktop | One-click install: open the file and Claude Desktop asks for the URL, client ID and secret. |
 | `vsp360-mcp-<version>-<platform>.tar.gz` / `.zip` | nothing | Standalone install on macOS, Linux or Windows (x64 and arm64), with Node.js bundled in. |
-| `vsp360-mcp-<version>.tgz` | Node.js 20+ | `npm install -g`, CI/CD pipelines. |
+| npm package (`vsp360-mcp` on the npm registry) | Node.js 20+ | `npm install -g vsp360-mcp`, CI/CD pipelines. |
 | Docker image | Docker | See [README.docker.md](README.docker.md). |
 | Source | Node.js 22+ | Development: `npm install && npm run build`, then use `node /ABSOLUTE/PATH/TO/vsp360-mcp/dist/index.js` as the command. |
 
 **Standalone.** Unpack the archive anywhere and use `bin/vsp360-mcp` (`bin\vsp360-mcp.cmd` on Windows) as the server command. You can symlink it onto your `PATH`:
 
 ```bash
-tar -xzf vsp360-mcp-0.1.16-linux-x64.tar.gz -C /opt && ln -s /opt/vsp360-mcp-0.1.16-linux-x64/bin/vsp360-mcp /usr/local/bin/vsp360-mcp
+tar -xzf vsp360-mcp-0.1.17-linux-x64.tar.gz -C /opt && ln -s /opt/vsp360-mcp-0.1.17-linux-x64/bin/vsp360-mcp /usr/local/bin/vsp360-mcp
 ```
 
-**npm or CI/CD.** Install straight from the release URL. The `vsp360-mcp` command then starts the server:
+**npm or CI/CD.** Install from the npm registry (version 0.1.17 and later). The `vsp360-mcp` command then starts the server:
 
 ```bash
-npm install -g https://github.com/visubramaniam/vsp360-mcp/releases/download/v0.1.16/vsp360-mcp-0.1.16.tgz
+npm install -g vsp360-mcp
 ```
+
+Each GitHub release also has the same package as `vsp360-mcp-<version>.tgz`, for machines that can't reach the registry.
 
 The examples below use `vsp360-mcp` as the command; substitute the path from whichever install you chose.
 
@@ -211,7 +213,7 @@ Users · Groups · Group Access · Service Accounts · Roles · Identity Provide
 
 `npm run package` builds every release package into `release/`. Use `--only npm,mcpb,standalone` and `--targets linux-x64,...` to build fewer, e.g. `npm run package -- --only standalone --targets darwin-arm64`. The standalone packages bundle Node.js 24, downloaded from nodejs.org and checked against its published SHA-256 sums.
 
-The [Release workflow](.github/workflows/release.yml) runs when a `v*` tag is pushed. It runs the tests, builds the packages and attaches them to the tag's GitHub release; if that release doesn't exist yet, it's created from the version's `CHANGELOG.md` section. If the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets are set, it also pushes the `linux/amd64` and `linux/arm64` Docker image. To rebuild an existing tag's packages, run the workflow by hand with that tag.
+The [Release workflow](.github/workflows/release.yml) runs when a `v*` tag is pushed. It runs the tests, builds the packages and attaches them to the tag's GitHub release; if that release doesn't exist yet, it's created from the version's `CHANGELOG.md` section. It then publishes the same `.tgz` to the npm registry with [trusted publishing](https://docs.npmjs.com/trusted-publishers), so no npm token is stored and each version gets a provenance attestation; this is skipped if that version is already on npm. The trusted publisher is set up on npmjs.com under the package's **Settings → Trusted Publisher** (repository `visubramaniam/vsp360-mcp`, workflow `release.yml`). If the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets are set, it also pushes the `linux/amd64` and `linux/arm64` Docker image. To rebuild an existing tag's packages, run the workflow by hand with that tag.
 
 ## Updating for a new VSP 360 release
 
