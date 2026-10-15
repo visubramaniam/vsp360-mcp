@@ -2,7 +2,8 @@ name: Release
 
 # Pushing a v* tag builds every package, attaches them to the tag's GitHub release
 # (created from the tag's CHANGELOG.md section if it does not exist yet), publishes the npm
-# package unless that version is already on npm, and pushes the multi-arch Docker image.
+# package unless that version is already on npm, and pushes the multi-arch Docker image to
+# ghcr.io (and Docker Hub when its credentials are set).
 # Run it by hand to rebuild the packages for an existing tag.
 on:
   push:
@@ -19,6 +20,7 @@ permissions:
 env:
   TAG: ${{ inputs.tag || github.ref_name }}
   IMAGE: docker.io/subramaniamv/vsp360-mcp
+  GHCR_IMAGE: ghcr.io/visubramaniam/vsp360-mcp
 
 jobs:
   packages:
@@ -92,38 +94,46 @@ jobs:
           npm publish "vsp360-mcp-$VERSION.tgz" --access public
 
   docker:
+    # Always pushes to GitHub Container Registry with the workflow's own token; also pushes to
+    # Docker Hub when its credentials are set.
     runs-on: ubuntu-latest
     needs: packages
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - name: Check for Docker Hub credentials
-        id: creds
+      - name: Choose registries
+        id: registries
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          VERSION: ${{ needs.packages.outputs.version }}
         run: |
+          tags="$GHCR_IMAGE:$VERSION,$GHCR_IMAGE:latest"
           if [ -n "$DOCKERHUB_USERNAME" ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
+            tags="$tags,$IMAGE:$VERSION,$IMAGE:latest"
+            echo "dockerhub=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning::DOCKERHUB_USERNAME and DOCKERHUB_TOKEN are not set; skipping the Docker image"
+            echo "::warning::DOCKERHUB_USERNAME and DOCKERHUB_TOKEN are not set; pushing to ghcr.io only"
           fi
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v5
-        if: steps.creds.outputs.present
         with:
           ref: ${{ env.TAG }}
       - uses: docker/setup-qemu-action@v3
-        if: steps.creds.outputs.present
       - uses: docker/setup-buildx-action@v3
-        if: steps.creds.outputs.present
       - uses: docker/login-action@v3
-        if: steps.creds.outputs.present
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - uses: docker/login-action@v3
+        if: steps.registries.outputs.dockerhub
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/build-push-action@v6
-        if: steps.creds.outputs.present
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: |
-            ${{ env.IMAGE }}:${{ needs.packages.outputs.version }}
-            ${{ env.IMAGE }}:latest
+          tags: ${{ steps.registries.outputs.tags }}

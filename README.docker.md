@@ -1,9 +1,15 @@
 # Running vsp360-mcp with Docker
 
-`vsp360-mcp` is also published as a container image on Docker Hub. Running it this way means you don't need to install Node.js or build anything; all you need is Docker.
+`vsp360-mcp` is also published as a container image. Running it this way means you don't need to install Node.js or build anything; all you need is Docker.
 
 ```
 docker.io/subramaniamv/vsp360-mcp
+```
+
+From version 0.1.18, the same image is also on GitHub Container Registry. Use it in place of the Docker Hub name in any command below, for example where Docker Hub's pull rate limits get in the way:
+
+```
+ghcr.io/visubramaniam/vsp360-mcp
 ```
 
 The image runs the same server described in the [main README](README.md), with the VSP 360 1.4 OpenAPI spec bundled in. It is built for `linux/amd64` and `linux/arm64`, so it runs natively on Intel and Apple silicon Macs, Windows (WSL 2) and Linux.
