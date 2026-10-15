@@ -136,14 +136,50 @@ function listOperations(args: Json) {
     ...(suggestion ? { suggestion: { decision: suggestion.decision, p: +suggestion.p.toFixed(3), shown: showHint } } : {}),
   });
   if (!hits.length) return text("No operations matched. Try other words, or call with no arguments to see the API areas.");
+  // With a HIGH-confidence top result, its parameters come with the results, so Claude can usually call it
+  // straight away instead of spending a turn on describe. Analytics is left out: it needs describe's MQL reference.
+  const top = hits[0].op;
+  const withParams = confidence === "high" && !blockedReason(top) && top.operationId !== "analyticsRunQuery";
   const advice = {
-    high: "Use the top result; describe it first if you need its parameters.",
+    high: withParams
+      ? "Use the top result. Its parameters are listed below, so you can usually call it directly; describe it only if you need the full schema or the response format."
+      : "Use the top result; describe it first if you need its parameters.",
     medium: "The top result is likely right. Check its description against the request before calling.",
     low: "Results are ambiguous. Describe the top 2–3 candidates and pick by their descriptions, or refine the query with more specific words.",
   }[confidence];
   const lines = hits.map((h, i) => `${i + 1}. ${fmt(h.op)}  (score ${h.score.toFixed(2)}; matched: ${h.matched.join(", ")})`);
   const suggested = showHint && suggestion ? `\nSuggested next step (learned model, p=${suggestion.p.toFixed(2)}): ${suggestionText(suggestion.decision, hits[0].op.operationId)}` : "";
-  return text(`Confidence: ${confidence.toUpperCase()}: ${reason}.\n${advice}${hint ? "\n" + hint : ""}${suggested}\n\n${lines.join("\n")}`);
+  const params = withParams ? `\n\nParameters of ${top.operationId}${top.bodyContentType ? " (* = required body field)" : ""}:\n${paramSummary(top)}` : "";
+  return text(`Confidence: ${confidence.toUpperCase()}: ${reason}.\n${advice}${hint ? "\n" + hint : ""}${suggested}\n\n${lines.join("\n")}${params}`);
+}
+
+/** A short type for a JSON schema: enums list their values, arrays end in [], objects say object. */
+function shortType(s: Json): string {
+  if (!s || typeof s !== "object") return "any";
+  if (Array.isArray(s.enum)) return s.enum.slice(0, 8).map((v: unknown) => JSON.stringify(v)).join("|") + (s.enum.length > 8 ? "|…" : "");
+  if (s.type === "array") return `${shortType(s.items)}[]`;
+  if (Array.isArray(s.type)) return s.type.join("|");
+  return s.type ?? (s.properties ? "object" : "any");
+}
+
+/** One line per parameter and body field: enough to build a call without describing the operation. */
+function paramSummary(op: Operation): string {
+  const MAX = 30;
+  const lines = op.params.map((p) => `- ${p.name} (${p.in}, ${p.required ? "required" : "optional"}): ${shortType(p.schema)}`);
+  if (op.bodyContentType) {
+    const files = fileFields(op);
+    const required: string[] = op.bodySchema?.required ?? [];
+    const fields = Object.entries<Json>(op.bodySchema?.properties ?? {})
+      .filter(([k]) => !files.includes(k))
+      .map(([k, s]) => `${k}${required.includes(k) ? "*" : ""}: ${shortType(s)}`);
+    const shown = fields.slice(0, MAX).join(", ") + (fields.length > MAX ? `, … ${fields.length - MAX} more` : "");
+    lines.push(`- body (${op.bodyContentType}, ${op.bodyRequired ? "required" : "optional"})${fields.length ? `: {${shown}}` : ""}`);
+    if (files.length) lines.push(`- files: ${files.map((f) => `${f} (local file path)`).join(", ")}`);
+    const nested = Object.values<Json>(op.bodySchema?.properties ?? {}).some((f) => f?.properties || f?.items?.properties);
+    if (nested) lines.push("- Some body fields are objects: describe the operation for their fields.");
+  }
+  if (lines.length > MAX + 1) return [...lines.slice(0, MAX), `- … ${lines.length - MAX} more; describe the operation for the rest`].join("\n");
+  return lines.length ? lines.join("\n") : "- none";
 }
 
 function suggestionText(d: Decision, top: string): string {
@@ -164,7 +200,7 @@ function describeOperation(args: Json) {
   if (op.operationId === "analyticsRunQuery" && resourceType) {
     const t = analyticsFields.type(resourceType);
     if (!t) return text(`Unknown MQL resource type "${resourceType}". Known types: ${analyticsFields.names().join(", ")}.`, true);
-    return text(JSON.stringify(t, null, 2));
+    return text(JSON.stringify(t));
   }
   const out: Json = {
     operationId: op.operationId,
@@ -182,7 +218,7 @@ function describeOperation(args: Json) {
   }
   out.response = spec.responseSchema(op);
   if (op.operationId === "analyticsRunQuery" && analyticsFields.loaded) out.mqlReference = analyticsFields.reference();
-  return text(JSON.stringify(out, null, 2));
+  return text(JSON.stringify(out));
 }
 
 async function runOperation(op: Operation, args: CallArgs, via: "meta" | "direct") {

@@ -41,7 +41,7 @@ A `query` is ranked with **BM25** over each operation's ID, summary, tag, path, 
 
 #### 2. Confidence rating
 
-Each result set carries a **confidence** of HIGH, MEDIUM or LOW, based on how far the top hit leads the next and how much of the request's own wording it matches. The rating comes with advice: call the top result, check its description, or describe the top two or three. When a LOW or MEDIUM result looks like a performance or topology question, the response points to `analyticsRunQuery`.
+Each result set carries a **confidence** of HIGH, MEDIUM or LOW, based on how far the top hit leads the next and how much of the request's own wording it matches. The rating comes with advice: call the top result, check its description, or describe the top two or three. With HIGH confidence, the top result's parameters are listed too (types, enum values, required body fields), so Claude can usually call it without spending a turn on `vsp360_describe_operation`. This is skipped when the top result is blocked by the current settings, and for `analyticsRunQuery`, which needs describe's MQL reference. When a LOW or MEDIUM result looks like a performance or topology question, the response points to `analyticsRunQuery`.
 
 #### 3. Learned hint (optional)
 
@@ -78,10 +78,11 @@ All other operations are refused, and direct tools are not created for them. The
 ## Features
 
 - **Auth:** Gets an OAuth2 `client_credentials` token from `POST /api/v1/vsp360/auth/token`. It reuses the token until shortly before it expires and fetches a new one automatically after a 401.
-- **Pagination:** Use `limit` and `offset` (at most 100 per page), or set `all_pages: true` to follow the RFC 8288 `next` links. `max_pages` caps the number of pages and defaults to 20. The `Content-Range` and `Link` headers are included in each result. If a later page is not JSON (for example a gateway error page), the pages before it are kept and a note says where it stopped.
+- **Pagination:** Use `limit` and `offset` (at most 100 per page), or set `all_pages: true` to fetch every page. When the first page's `Link` header gives both `next` and `last`, the remaining pages are fetched four at a time; otherwise the `next` links are followed one by one. `max_pages` caps the number of pages and defaults to 20. The `Content-Range` and `Link` headers are included in each result. If a later page is not JSON (for example a gateway error page), the pages before it are kept and a note says where it stopped.
 - **Downloads:** Binary responses are streamed to `VSP360_DOWNLOAD_DIR`, so large bundles never sit in memory, and the file path is returned. These include diagnostic bundles (`.tar.gz`), CSR ZIPs and billing reports. A name the server already used gets a numbered suffix. Any call can also pass `save_to: "report.json"` (a file name or a path inside the download folder); with `all_pages`, every page is saved.
 - **Uploads:** Multipart operations take local file paths, for example `files: {"file": "~/devices.csv"}`. This applies to installing a TLS certificate, validating a bulk-registration CSV, and uploading an upgrade package. Files are streamed from disk, so 20 GB `.zst` upgrade packages don't need to fit in memory. Hidden files are refused (see [Safety](#safety-read-only-by-default)).
 - **TLS:** Use `VSP360_CA_CERT` for a private CA. Use `VSP360_INSECURE_TLS=true` only for lab systems with self-signed certificates.
+- **Compact responses:** JSON responses and `vsp360_describe_operation` output are returned without indentation, which is about 40% fewer characters for the model to read. Files written with `save_to` stay indented.
 - **Large responses:** Responses longer than `VSP360_MAX_RESPONSE_CHARS` are truncated, with a note telling Claude how to narrow the request.
 
 ## Improving search: logging and the learned hint

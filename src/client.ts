@@ -168,16 +168,42 @@ export class Vsp360Client {
     }
   }
 
-  /** Follows RFC 8288 `next` links and concatenates array pages. */
+  /**
+   * Fetches every page of an array result and concatenates them. When the first page's `Link` header names both
+   * `next` and `last`, and they differ only in `offset`, every page's URL is known up front and the pages are
+   * fetched PAGE_CONCURRENCY at a time; otherwise (and for anything after `last`) `next` links are followed in turn.
+   */
   private async allPages(op: Operation, url: string, headers: Record<string, string>, args: CallArgs, first: Response): Promise<CallResult> {
     const firstBody = Buffer.from(await first.arrayBuffer());
     const items = parseArray(firstBody);
     if (!items) return this.renderBuffered(op, first, firstBody, args);
 
-    let next = this.followable(nextLink(first.headers.get("link"), url));
+    const link = first.headers.get("link");
+    let next = this.followable(relLink(link, url, "next"));
     let pages = 1;
     let stop = "";
     const maxPages = args.max_pages ?? 20;
+
+    const planned = next ? pageUrls(url, next, this.followable(relLink(link, url, "last")), maxPages - 1) : [];
+    if (planned.length > 1) {
+      const fetched = await mapLimit(planned, PAGE_CONCURRENCY, async (u) => {
+        const res = await this.send(op, u, headers, args);
+        return { u, res, body: Buffer.from(await res.arrayBuffer()) };
+      });
+      for (const { u, res, body } of fetched) {
+        if (!res.ok) return this.renderBuffered(op, res, body, args);
+        const data = parseArray(body);
+        if (!data) {
+          stop = `\n\n[Stopped at page ${pages + 1}: the response was not a JSON array (${res.headers.get("content-type") ?? "no content type"}). Showing the ${pages} page(s) before it.]`;
+          next = undefined;
+          break;
+        }
+        items.push(...data);
+        pages++;
+        next = this.followable(relLink(res.headers.get("link"), u, "next"));
+      }
+    }
+
     while (next && pages < maxPages) {
       const page = await this.send(op, next, headers, args);
       const body = Buffer.from(await page.arrayBuffer());
@@ -190,7 +216,7 @@ export class Vsp360Client {
       }
       items.push(...data);
       pages++;
-      next = this.followable(nextLink(page.headers.get("link"), next));
+      next = this.followable(relLink(page.headers.get("link"), next, "next"));
     }
     if (!stop && next) stop = `\n\n[Stopped after ${pages} pages (max_pages); more results exist.]`;
     const label = `${items.length} items from ${pages} page(s)`;
@@ -200,7 +226,7 @@ export class Vsp360Client {
       writeFileSync(file, json, { flag: "wx" });
       return { ok: true, status: first.status, text: `${label}\nSaved ${Buffer.byteLength(json)} bytes (application/json) to ${file}${stop}` };
     }
-    return { ok: true, status: first.status, text: this.truncate(JSON.stringify(items, null, 2), label) + stop };
+    return { ok: true, status: first.status, text: this.truncate(JSON.stringify(items), label) + stop };
   }
 
   private buildUrl(op: Operation, params: Record<string, unknown>, headers: Record<string, string>): string {
@@ -339,9 +365,10 @@ export class Vsp360Client {
       return { ok: true, status: res.status, text: `${this.header(res)}\nSaved ${buf.length} bytes (${ct || "unknown type"}) to ${file}` };
     }
     let text = buf.toString("utf8");
+    // Compact JSON: the model reads it as easily as indented JSON, in about a third fewer characters (and tokens).
     if (ct.includes("json") && text) {
       try {
-        text = JSON.stringify(JSON.parse(text), null, 2);
+        text = JSON.stringify(JSON.parse(text));
       } catch {}
     }
     return { ok: res.ok, status: res.status, text: `${this.header(res)}\n\n${this.truncate(text || "(empty body)")}` };
@@ -399,13 +426,53 @@ function serverFileName(cd: string | null): string | undefined {
   }
 }
 
-function nextLink(link: string | null, base: string): string | undefined {
+/** The URL of one relation (`next`, `last`, ...) in an RFC 8288 Link header. */
+function relLink(link: string | null, base: string, rel: string): string | undefined {
   if (!link) return undefined;
   for (const part of link.split(",")) {
-    const m = part.match(/<([^>]+)>\s*;.*rel="?next"?/);
-    if (m) return new URL(m[1], base).toString();
+    const m = part.match(/<([^>]+)>\s*;.*rel="?([\w-]+)"?/);
+    if (m && m[2] === rel) return new URL(m[1], base).toString();
   }
   return undefined;
+}
+
+// Pages fetched at once when all page URLs are known; enough to hide latency without crowding the gateway.
+const PAGE_CONCURRENCY = 4;
+
+const offsetOf = (url: string) => numberParam(url, "offset");
+function numberParam(url: string, name: string): number | undefined {
+  const m = url.match(new RegExp(`[?&]${name}=(\\d+)(?:&|$)`));
+  return m ? Number(m[1]) : undefined;
+}
+const withOffset = (url: string, offset: number) => url.replace(/([?&]offset=)\d+/, `$1${offset}`);
+
+/**
+ * The URLs of the pages from `next` to `last` (at most `budget` of them), when the two links differ only in their
+ * `offset` and the step between pages is known; otherwise an empty list, and the caller follows `next` links.
+ */
+export function pageUrls(current: string, next: string, last: string | undefined, budget: number): string[] {
+  if (!last || budget < 1) return [];
+  const start = offsetOf(next);
+  const end = offsetOf(last);
+  if (start === undefined || end === undefined || end < start || withOffset(next, end) !== last) return [];
+  const step = numberParam(next, "limit") ?? start - (offsetOf(current) ?? 0);
+  if (!(step > 0) || (end - start) % step !== 0) return [];
+  const count = Math.min((end - start) / step + 1, budget);
+  return Array.from({ length: count }, (_, k) => withOffset(next, start + k * step));
+}
+
+/** Runs `fn` over `items` with at most `limit` running at once, keeping the results in order. */
+async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let i = 0;
+  const worker = async () => {
+    while (i < items.length) {
+      const k = i++;
+      out[k] = await fn(items[k]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
 }
 
 function extFor(ct: string | null): string {

@@ -74,6 +74,26 @@ test("read-only mode refuses uploads unless VSP360_UPLOAD_DIR is set", async () 
   assert.doesNotMatch(textOf(await rw.callTool({ name: "vsp360_call_operation", arguments: args })), /VSP360_UPLOAD_DIR/);
 });
 
+test("a HIGH-confidence search lists the top result's parameters, unless that operation is blocked", async () => {
+  const c = await server();
+  const search = async (query) => textOf(await c.callTool({ name: "vsp360_list_operations", arguments: { query } }));
+  const alerts = await search("show current platform alerts");
+  assert.match(alerts, /^Confidence: HIGH/);
+  assert.match(alerts, /Parameters of vsp360GetAlerts:\n- active \(query, optional\): boolean/);
+  assert.match(await search("download device inventory csv"), /- tab \(query, optional\): "all"\|"block"/, "enums list their values");
+  const snapshot = await search("take a snapshot now outside the schedule");
+  assert.match(snapshot, /^Confidence: HIGH/);
+  assert.doesNotMatch(snapshot, /Parameters of/, "a write blocked in read-only mode gets no parameters");
+  assert.doesNotMatch(await search("list registered devices"), /Parameters of/, "only HIGH confidence");
+});
+
+test("describe returns compact JSON", async () => {
+  const c = await server();
+  const d = textOf(await c.callTool({ name: "vsp360_describe_operation", arguments: { operationId: "vsp360GetAbout" } }));
+  assert.ok(!d.includes("\n  "), "no indentation");
+  assert.equal(JSON.parse(d).operationId, "vsp360GetAbout");
+});
+
 test("direct tools exclude writes and the secret read in read-only mode, and all names are valid", async () => {
   const c = await server({ VSP360_TOOLSETS: "all" });
   const { tools } = await c.listTools();
