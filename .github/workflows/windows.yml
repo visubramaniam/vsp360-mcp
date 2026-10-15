@@ -1,0 +1,79 @@
+name: Windows packages
+
+# Tests a release's Windows standalone packages on real Windows machines, x64 and arm64: downloads each zip,
+# checks it against SHA256SUMS, unpacks it under C:\Program Files, and runs tests/smoke/package-smoke.mjs with
+# the package's own Node.js runtime against a mock VSP 360. The Release workflow calls it for every tag; run it
+# by hand to test an existing release.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to test, e.g. v0.1.20 (empty for the latest release)
+        required: false
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+  pull_request:
+    paths:
+      - .github/workflows/windows.yml
+      - tests/smoke/**
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            target: win-x64
+            arch: x64
+          - runner: windows-11-arm
+            target: win-arm64
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: tests/smoke
+
+      - name: Download, verify and unpack
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          if (-not $env:TAG) { $env:TAG = gh release view --repo $env:GITHUB_REPOSITORY --json tagName --jq .tagName }
+          $version = $env:TAG.TrimStart('v')
+          $zip = "vsp360-mcp-$version-$env:TARGET.zip"
+          gh release download $env:TAG --repo $env:GITHUB_REPOSITORY --pattern $zip --pattern SHA256SUMS --dir dl
+          $line = Select-String -Path dl/SHA256SUMS -Pattern " $([regex]::Escape($zip))$"
+          if (-not $line) { throw "$zip is not listed in SHA256SUMS" }
+          $want = $line.Line.Split(' ')[0]
+          $got = (Get-FileHash "dl/$zip" -Algorithm SHA256).Hash.ToLower()
+          if ($got -ne $want) { throw "$zip doesn't match SHA256SUMS: $got, expected $want" }
+          Write-Output "ok   $zip matches SHA256SUMS"
+          # The path INSTALL.md suggests, with a space in it.
+          $dest = "C:\Program Files\vsp360-mcp"
+          Expand-Archive "dl/$zip" -DestinationPath $dest -Force
+          "PKG=$dest\vsp360-mcp-$version-$env:TARGET" >> $env:GITHUB_ENV
+          "VERSION=$version" >> $env:GITHUB_ENV
+
+      - name: Smoke test with the package's own Node.js
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          $node = Join-Path $env:PKG "runtime\node.exe"
+          $arch = & $node -p "process.arch"
+          if ($arch -ne $env:ARCH) { throw "the bundled runtime is $arch, expected $env:ARCH" }
+          & $node tests/smoke/package-smoke.mjs $env:PKG $env:VERSION
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

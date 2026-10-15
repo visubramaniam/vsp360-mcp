@@ -4,6 +4,7 @@ name: Release
 # (created from the tag's CHANGELOG.md section if it does not exist yet), publishes the npm
 # package unless that version is already on npm, and pushes the multi-arch Docker image to
 # ghcr.io (and Docker Hub when its credentials are set).
+# The Windows packages are then tested on Windows x64 and arm64 machines (windows.yml).
 # Run it by hand to rebuild the packages for an existing tag.
 on:
   push:
@@ -92,6 +93,13 @@ jobs:
           grep " vsp360-mcp-$VERSION.tgz$" SHA256SUMS | sha256sum -c -
           npm install -g npm@11.6.2
           npm publish "vsp360-mcp-$VERSION.tgz" --access public
+
+  windows:
+    # Tests the release's Windows packages on Windows x64 and arm64 machines.
+    needs: packages
+    uses: ./.github/workflows/windows.yml
+    with:
+      tag: ${{ inputs.tag || github.ref_name }}
 
   docker:
     # Always pushes to GitHub Container Registry with the workflow's own token; also pushes to

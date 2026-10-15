@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Tests
+
+- **Windows packages are tested on Windows.** A new workflow, `windows.yml`, downloads a release's `win-x64` and `win-arm64` zips on GitHub's Windows x64 and arm64 machines, checks them against `SHA256SUMS`, unpacks them under `C:\Program Files`, and runs `tests/smoke/package-smoke.mjs` with the package's own Node.js against a mock VSP 360. The Release workflow runs it for every tag, and it can be run by hand for any release. The smoke test checks `runtime\node.exe dist\index.js`, the `.cmd` launcher, sign-in, `save_to` and a binary download, and works for the macOS and Linux packages too.
+
 ### Changed
 
 - **The plugin README explains its package sources:** every package comes from the public npm registry with an integrity hash, there's no registry configuration, and the repository root's `package.json` and lockfile belong to the server's source rather than the plugin install. This is for the directory reviewers' "custom registry or package source" check. A test keeps it true.
