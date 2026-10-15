@@ -28,7 +28,7 @@ The image runs the same server described in the [main README](README.md), with t
 docker pull docker.io/subramaniamv/vsp360-mcp:latest
 ```
 
-To pin a version instead of `latest`, use a release tag, for example `:0.1.21`.
+To pin a version instead of `latest`, use a release tag, for example `:0.1.22`.
 
 ## 3. Test it from the command line
 

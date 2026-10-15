@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.1.22 — 2026-10-15
+
+### Fixed
+
+- **The Claude Desktop extension works with optional settings left empty.** Claude Desktop passes an optional setting with no default, such as **CA certificate** or **Download folder**, as the literal text `${user_config.ca_cert}` when it's left empty. The server read that as a file path, so on Windows every call failed with `ENOENT ... C:\Windows\system32\${user_config.ca_cert}`. Settings still holding such a placeholder are now treated as unset. (#22)
 
 ### Security
 

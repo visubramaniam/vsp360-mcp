@@ -136,7 +136,7 @@ Then install the server in one of these ways. Each [GitHub release](https://gith
 **Standalone.** Unpack the archive anywhere and use `bin/vsp360-mcp` (`bin\vsp360-mcp.cmd` on Windows) as the server command. You can symlink it onto your `PATH`:
 
 ```bash
-tar -xzf vsp360-mcp-0.1.21-linux-x64.tar.gz -C /opt && ln -s /opt/vsp360-mcp-0.1.21-linux-x64/bin/vsp360-mcp /usr/local/bin/vsp360-mcp
+tar -xzf vsp360-mcp-0.1.22-linux-x64.tar.gz -C /opt && ln -s /opt/vsp360-mcp-0.1.22-linux-x64/bin/vsp360-mcp /usr/local/bin/vsp360-mcp
 ```
 
 **npm or CI/CD.** Install from the npm registry (version 0.1.17 and later). The `vsp360-mcp` command then starts the server:
