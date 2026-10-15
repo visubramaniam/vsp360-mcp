@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- **Docker builds no longer hang under emulation.** The image's build and dependency stages now run on the build machine's own platform and only the final stage is per platform, so multi-arch builds don't run `npm` under QEMU. In the 0.1.19 release, `npm ci` crashed there (SIGILL) and the build hung. The Release workflow's Docker job also stops after 30 minutes instead of hanging.
+
 ## 0.1.19 — 2026-10-15
 
 ### Changed
