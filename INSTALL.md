@@ -1,5 +1,7 @@
 # Installing vsp360-mcp
 
+vsp360-mcp is a community MCP server for Hitachi VSP 360. It isn't an official Hitachi Vantara product.
+
 This guide covers installing and deploying the server. For what the server does and every setting it takes, see the [README](README.md).
 
 - [Before you start](#before-you-start)
@@ -65,7 +67,7 @@ Get-FileHash .\vsp360-mcp-0.1.19-win-x64.zip -Algorithm SHA256
    - **Upload folder**: the only folder files may be uploaded from, such as bulk-registration CSVs. In read-only mode, uploads are refused unless it's set.
 4. Enable the extension.
 
-The extension runs with the Node.js built into Claude Desktop. To change a setting later, go to **Settings → Extensions → Hitachi VSP 360**.
+The extension runs with the Node.js built into Claude Desktop. To change a setting later, go to **Settings → Extensions → Hitachi VSP 360 (Community)**.
 
 ## Standalone package
 
@@ -302,7 +304,7 @@ If something fails, the server's messages go to standard error. Claude Desktop w
 
 | Method | Upgrade | Uninstall |
 |---|---|---|
-| Extension | Open the new `.mcpb` file and install it over the old version. Check your settings afterwards. | **Settings → Extensions → Hitachi VSP 360 → Uninstall** |
+| Extension | Open the new `.mcpb` file and install it over the old version. Check your settings afterwards. | **Settings → Extensions → Hitachi VSP 360 (Community) → Uninstall** |
 | Standalone | Unpack the new version next to the old one, repoint the symlink or config, then delete the old folder. | Delete the folder and the symlink. |
 | npm | `npm install -g vsp360-mcp@latest`, or update the pinned version in your `npx` config | `npm uninstall -g vsp360-mcp` |
 | Docker | `docker pull` the new tag, and update the tag in your Claude config if you pinned one. | `docker rmi docker.io/subramaniamv/vsp360-mcp:<tag>` |

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **Named as a community project.** The README, package description, Docker image labels and Claude Desktop extension now call vsp360-mcp a "Community MCP server for Hitachi VSP 360" and say it isn't an official Hitachi Vantara product. The extension shows as **Hitachi VSP 360 (Community)** in Claude Desktop's settings.
+
 ## 0.1.19 — 2026-10-15
 
 ### Changed

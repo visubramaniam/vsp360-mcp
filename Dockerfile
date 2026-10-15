@@ -14,7 +14,7 @@ RUN npm run build
 # ---- runtime: production dependencies only ----
 FROM node:22-alpine
 LABEL org.opencontainers.image.title="vsp360-mcp" \
-      org.opencontainers.image.description="MCP server for the Hitachi VSP 360 1.4 REST API" \
+      org.opencontainers.image.description="Community MCP server for Hitachi VSP 360 (not an official Hitachi Vantara product)" \
       org.opencontainers.image.source="https://github.com/visubramaniam/vsp360-mcp" \
       org.opencontainers.image.licenses="MIT"
 WORKDIR /app
