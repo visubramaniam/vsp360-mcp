@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **The vsp360-community plugin uses vsp360-mcp 0.1.22:** its version and lockfile moved to the 0.1.22 release.
+
 ## 0.1.22 — 2026-10-15
 
 ### Fixed
