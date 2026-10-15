@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **INSTALL.md**, a guide to installing and deploying the server with each package: the Claude Desktop extension, standalone, npm, Docker and source. It also covers Claude Code and Claude Desktop setup, CI/CD pipelines, checksums, upgrading and uninstalling. It's included in the release packages.
+
 ## 0.1.16 — 2026-10-14
 
 ### Added

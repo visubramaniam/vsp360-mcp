@@ -27,7 +27,7 @@ const NODE_VERSION = process.env.NODE_RUNTIME_VERSION || "24.21.0";
 // Standalone platforms, named as Node.js names its downloads.
 const TARGETS = ["darwin-arm64", "darwin-x64", "linux-x64", "linux-arm64", "win-x64", "win-arm64"];
 // Files copied into every package besides dist/ and spec/.
-const APP_FILES = ["package.json", "package-lock.json", "LICENSE", "README.md", "CHANGELOG.md"];
+const APP_FILES = ["package.json", "package-lock.json", "LICENSE", "README.md", "INSTALL.md", "CHANGELOG.md"];
 
 const { values: opts } = parseArgs({
   options: { only: { type: "string", default: "npm,mcpb,standalone" }, targets: { type: "string", default: TARGETS.join(",") } },

@@ -9,7 +9,8 @@
   },
   "files": [
     "dist",
-    "spec"
+    "spec",
+    "INSTALL.md"
   ],
   "scripts": {
     "build": "tsc",

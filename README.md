@@ -113,6 +113,8 @@ With `VSP360_DECISION_COLLECT=true` (and the log on), the server makes every que
 
 ## Setup
 
+[INSTALL.md](INSTALL.md) has the full installation and deployment guide, including Windows, CI/CD pipelines, checksums, upgrading and troubleshooting. In short:
+
 First, create a service account in VSP 360 and note its client ID and secret. Give it the access your use case needs: `admin` covers alerts, logs and system operations; for devices, use a group whose access policy covers the device types.
 
 Then install the server in one of these ways. Each [GitHub release](https://github.com/visubramaniam/vsp360-mcp/releases) has the packages and a `SHA256SUMS` file.
