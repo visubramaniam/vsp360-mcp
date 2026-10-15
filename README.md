@@ -1,5 +1,7 @@
 # vsp360-mcp
 
+[![npm](https://img.shields.io/npm/v/vsp360-mcp)](https://www.npmjs.com/package/vsp360-mcp) [![Release](https://github.com/visubramaniam/vsp360-mcp/actions/workflows/release.yml/badge.svg)](https://github.com/visubramaniam/vsp360-mcp/actions/workflows/release.yml)
+
 An MCP server for the **Hitachi VSP 360 1.4 REST API**, built from the Platform OpenAPI spec `spec/Platform-vsp360-openapi.yaml`. It gives Claude (or any other MCP client) access to all 264 API operations. The token endpoint is excluded because the server handles authentication itself.
 
 ## How it exposes the API
@@ -213,7 +215,7 @@ Users · Groups · Group Access · Service Accounts · Roles · Identity Provide
 
 `npm run package` builds every release package into `release/`. Use `--only npm,mcpb,standalone` and `--targets linux-x64,...` to build fewer, e.g. `npm run package -- --only standalone --targets darwin-arm64`. The standalone packages bundle Node.js 24, downloaded from nodejs.org and checked against its published SHA-256 sums.
 
-The [Release workflow](.github/workflows/release.yml) runs when a `v*` tag is pushed. It runs the tests, builds the packages and attaches them to the tag's GitHub release; if that release doesn't exist yet, it's created from the version's `CHANGELOG.md` section. It then publishes the same `.tgz` to the npm registry with [trusted publishing](https://docs.npmjs.com/trusted-publishers), so no npm token is stored and each version gets a provenance attestation; this is skipped if that version is already on npm. The trusted publisher is set up on npmjs.com under the package's **Settings → Trusted Publisher** (repository `visubramaniam/vsp360-mcp`, workflow `release.yml`). If the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets are set, it also pushes the `linux/amd64` and `linux/arm64` Docker image. To rebuild an existing tag's packages, run the workflow by hand with that tag.
+The [Release workflow](.github/workflows/release.yml) runs when a `v*` tag is pushed. It runs the tests, builds the packages and attaches them to the tag's GitHub release; if that release doesn't exist yet, it's created from the version's `CHANGELOG.md` section. It then publishes the same `.tgz` to the npm registry with [trusted publishing](https://docs.npmjs.com/trusted-publishers), so no npm token is stored and each version gets a provenance attestation; this is skipped if that version is already on npm. The trusted publisher is set up on npmjs.com under the package's **Settings → Trusted Publisher** (repository `visubramaniam/vsp360-mcp`, workflow `release.yml`). It pushes the `linux/amd64` and `linux/arm64` Docker image to `ghcr.io/visubramaniam/vsp360-mcp` using the workflow's own token, and also to Docker Hub if the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets are set. To rebuild an existing tag's packages, run the workflow by hand with that tag.
 
 ## Updating for a new VSP 360 release
 

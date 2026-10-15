@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **GitHub Container Registry.** The Release workflow also pushes the Docker image to `ghcr.io/visubramaniam/vsp360-mcp`, using the workflow's own token. Docker Hub is still used when its secrets are set.
+- **README badges** for the npm version and the Release workflow.
+
 ## 0.1.17 — 2026-10-14
 
 ### Security

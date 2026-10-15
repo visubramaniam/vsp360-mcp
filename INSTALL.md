@@ -136,7 +136,7 @@ Versions 0.1.16 and earlier are only available this way.
 
 ## Docker
 
-The image `docker.io/subramaniamv/vsp360-mcp` is built for `linux/amd64` and `linux/arm64`. Each release is tagged with its version, and `latest` points at the newest release.
+The image `docker.io/subramaniamv/vsp360-mcp` is built for `linux/amd64` and `linux/arm64`. Each release is tagged with its version, and `latest` points at the newest release. From version 0.1.18, the same image is also published as `ghcr.io/visubramaniam/vsp360-mcp`.
 
 ```bash
 docker pull docker.io/subramaniamv/vsp360-mcp:0.1.17
