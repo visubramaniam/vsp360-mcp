@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Security
+
+- **No dependency alerts.** `@anthropic-ai/mcpb`, the tool that packs the Claude Desktop extension, is no longer a dev dependency: `npm run package` runs it with `npx`, pinned to 2.1.2. Its dependencies with advisories, `node-forge` (signing) and `tmp` (interactive prompts), aren't used by `mcpb pack` and are no longer in the repository's lockfile, which closes Dependabot alerts #1, #9 and #28. `npm audit` reports no vulnerabilities. (SECURITY.md D3)
+
 ### Changed
 
 - **The vsp360-community plugin uses vsp360-mcp 0.1.21:** its version and lockfile moved to the 0.1.21 release.
