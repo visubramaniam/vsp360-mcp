@@ -112,13 +112,15 @@ From a Command Prompt you can also run `bin\vsp360-mcp.cmd`. In MCP client confi
 
 ## Claude Code plugin
 
-The [`plugin/`](https://github.com/visubramaniam/vsp360-mcp/tree/main/plugin) folder is a Claude plugin, **vsp360-community**. It runs the server with `npx` (pinned to the release's version) and adds two skills: capacity and performance reports, and a health check. Install it in Claude Code from this repository's marketplace:
+The [`plugin/`](https://github.com/visubramaniam/vsp360-mcp/tree/main/plugin) folder is a Claude plugin, **vsp360-community**. It installs the server from its own lockfile (every package pinned with an integrity hash) and adds two skills: capacity and performance reports, and a health check. Install it in Claude Code from this repository's marketplace:
 
 ```
 /plugin install vsp360-community --marketplace visubramaniam/vsp360-mcp
 ```
 
 Claude Code asks for the VSP 360 URL, client ID and secret, and stores the secret in your system's secure credential store. The plugin works in Claude Code and in Cowork sessions on your computer. Claude Desktop **chat** doesn't run plugins' local servers, so use the [extension](#claude-desktop-extension-mcpb) there.
+
+[README.plugin.md](README.plugin.md) covers the plugin in full: settings, the skills, updating, troubleshooting and privacy.
 
 ## npm package
 
