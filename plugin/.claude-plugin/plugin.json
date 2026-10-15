@@ -15,8 +15,8 @@
   "supportUrl": "https://github.com/visubramaniam/vsp360-mcp/issues",
   "mcpServers": {
     "vsp360": {
-      "command": "npx",
-      "args": ["-y", "vsp360-mcp@0.1.20"],
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/node_modules/vsp360-mcp/dist/index.js"],
       "env": {
         "VSP360_URL": "${user_config.url}",
         "VSP360_CLIENT_ID": "${user_config.client_id}",
