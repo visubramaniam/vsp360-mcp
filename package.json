@@ -14,7 +14,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/cache-spec.mjs",
     "start": "node dist/index.js",
     "inspect": "npx @modelcontextprotocol/inspector node dist/index.js",
     "eval": "npm run build && node tests/search-eval.mjs",

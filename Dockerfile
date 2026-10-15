@@ -1,12 +1,14 @@
 # syntax=docker/dockerfile:1
 
-# ---- build: compile TypeScript ----
+# ---- build: compile TypeScript and pre-parse the spec ----
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY tsconfig.json ./
 COPY src ./src
+COPY spec ./spec
+COPY scripts/cache-spec.mjs ./scripts/
 RUN npm run build
 
 # ---- runtime: production dependencies only ----

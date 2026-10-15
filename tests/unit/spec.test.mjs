@@ -1,12 +1,13 @@
 // Unit tests for loading and indexing the OpenAPI spec.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Spec, toolParamName } from "../../dist/spec.js";
+import { Spec, SPEC_CACHE, parseYaml, toolParamName } from "../../dist/spec.js";
 
-const spec = new Spec(new URL("../../spec/Platform-vsp360-openapi.yaml", import.meta.url).pathname);
+const SPEC_FILE = new URL("../../spec/Platform-vsp360-openapi.yaml", import.meta.url).pathname;
+const spec = new Spec(SPEC_FILE);
 
 test("indexes 264 operations, hides the token endpoint, and flags exactly one secret read", () => {
   assert.equal(spec.operations.size, 264);
@@ -74,6 +75,37 @@ components:
     assert.equal(schema.properties.name.example, undefined, "examples are dropped");
     assert.match(schema.properties.child.description, /Node \(nested; see describe_operation\)/);
     assert.equal(s.tags[0].description, "Things that you can list here.", "tag descriptions keep their first sentence");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("the build-time cache is the bundled YAML, parsed", () => {
+  const cache = JSON.parse(readFileSync(SPEC_CACHE, "utf8"));
+  assert.deepEqual(cache.doc, parseYaml(readFileSync(SPEC_FILE, "utf8")));
+});
+
+test("a changed YAML spec is parsed afresh rather than taken from the cache", () => {
+  const dir = mkdtempSync(join(tmpdir(), "vsp360-spec-"));
+  const file = join(dir, "changed.yaml");
+  const yaml = readFileSync(SPEC_FILE, "utf8");
+  const summary = spec.operations.get("vsp360GetAlerts").summary;
+  writeFileSync(file, yaml.replace(`summary: ${summary}`, "summary: Changed summary"));
+  try {
+    assert.equal(new Spec(file).operations.get("vsp360GetAlerts").summary, "Changed summary");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a JSON spec loads like the YAML one", () => {
+  const dir = mkdtempSync(join(tmpdir(), "vsp360-spec-"));
+  const file = join(dir, "spec.json");
+  writeFileSync(file, JSON.stringify(parseYaml(readFileSync(SPEC_FILE, "utf8"))));
+  try {
+    const s = new Spec(file);
+    assert.deepEqual([...s.operations.keys()], [...spec.operations.keys()]);
+    assert.deepEqual(s.responseSchema(s.operations.get("vsp360GetAlerts")), spec.responseSchema(spec.operations.get("vsp360GetAlerts")));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

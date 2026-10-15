@@ -1,7 +1,9 @@
 // Loads the VSP 360 OpenAPI document and indexes every operation so the
 // server can expose them as MCP tools.
-import { readFileSync } from "node:fs";
-import { parse } from "yaml";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { bundled } from "./config.js";
 
 type Json = any;
 
@@ -50,6 +52,43 @@ const READ_ONLY_POSTS = new Set([
 // Reads that return a live credential. Every other read masks secrets, per the spec.
 const SECRET_READS = new Set(["vsp360GetServiceAccountSecret"]);
 
+/**
+ * Pre-parsed copy of the bundled YAML spec, written by `npm run build` (scripts/cache-spec.mjs) as
+ * `{ sha256, doc }`. Parsing the 2 MB YAML takes about 250 ms and briefly about 250 MB of memory;
+ * the JSON copy parses in a few milliseconds.
+ */
+export const SPEC_CACHE = bundled("dist", "openapi-cache.json");
+
+const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
+
+/**
+ * Parses OpenAPI YAML as the server always has; the build-time cache is made with this too. The yaml
+ * package is loaded only when needed, since with the cache most starts never parse YAML.
+ */
+export function parseYaml(text: string): Json {
+  const { parse } = createRequire(import.meta.url)("yaml") as typeof import("yaml");
+  return parse(text, { maxAliasCount: -1 });
+}
+
+/**
+ * Reads an OpenAPI document. A `.json` file is parsed as JSON. A YAML file is taken from SPEC_CACHE when
+ * the cache was made from exactly the same text, so replacing the YAML file still takes effect at once.
+ */
+export function loadDocument(file: string): Json {
+  const text = readFileSync(file, "utf8");
+  if (file.endsWith(".json")) return JSON.parse(text);
+  if (existsSync(SPEC_CACHE)) {
+    const cache = JSON.parse(readFileSync(SPEC_CACHE, "utf8"));
+    if (cache.sha256 === sha256(text)) return cache.doc;
+  }
+  return parseYaml(text);
+}
+
+/** The cache file's content for a YAML spec's text. */
+export function specCache(text: string): string {
+  return JSON.stringify({ sha256: sha256(text), doc: parseYaml(text) });
+}
+
 export class Spec {
   readonly operations = new Map<string, Operation>();
   readonly tags: { name: string; description: string; count: number }[] = [];
@@ -58,7 +97,7 @@ export class Spec {
   private doc: Json;
 
   constructor(file: string) {
-    this.doc = parse(readFileSync(file, "utf8"), { maxAliasCount: -1 });
+    this.doc = loadDocument(file);
     for (const [path, item] of Object.entries<Json>(this.doc.paths)) {
       for (const method of METHODS) {
         const op = item[method];
