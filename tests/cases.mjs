@@ -83,7 +83,7 @@ export const HELD_OUT_2 = [
   ["give a group read access to one array", ["vsp360PostGroupsByGroupAccessResources"]],
   ["onboard an hnas file server", ["vsp360PostExternalAppsByAppTypeOnboard"]],
   ["tag a storage system with its site name", ["vsp360PatchDevicesByIdTags"]],
-  ["history of changes for array serial 840477", ["vsp360GetDevicesReport"]],
+  ["history of changes for array serial 410001", ["vsp360GetDevicesReport"]],
   ["remove a lun from a host", ["orchestrationExecuteUnassignLun"]],
   ["is there enough cluster capacity to apply the upgrade", ["vsp360GetUpgradesResourcesValidate"]],
   ["switch the deployment to the large profile", ["vsp360PostProfileSwitches"]],
