@@ -39,13 +39,13 @@ The safest configuration for unattended or shared use is read-only, with `VSP360
 | **Method** | Static review of `src/`, the packaging script, the `.mcpb` manifest, the Dockerfile and the GitHub workflows. Findings were tested by running the compiled server's functions locally against a mock HTTP server, plus `npm audit` for dependencies. |
 | **Not covered** | Behaviour of a live VSP 360, Windows path handling, and Linux-only paths (reasoned about, not run) |
 
-No critical or high-severity issues were found in the server's own code. The most important problems were an upload path that read-only mode didn't fully close (S1), environment data in the public repository (S2), and a vulnerable `undici` version (D1). S1, D1 and D2 are fixed on `main` and will ship in the next release; the rest are open.
+No critical or high-severity issues were found in the server's own code. The most important problems were an upload path that read-only mode didn't fully close (S1), environment data in the public repository (S2), and a vulnerable `undici` version (D1). S1, D1 and D2 are fixed in 0.1.17; the rest are open.
 
 ### Findings in the code
 
 | ID | Severity | Finding | Status |
 |---|---|---|---|
-| S1 | Medium | Read-only mode allows a file upload | Fixed on `main`, next release |
+| S1 | Medium | Read-only mode allows a file upload | Fixed in 0.1.17 |
 | S2 | Medium | The public repository contains data from a real environment | Open |
 | S3 | Low | Redirects are followed, including for the token request | Open |
 | S4 | Low | `vsp360VerifyDirectory` is treated as read-only but can make VSP 360 connect to any LDAP host | Open |
@@ -97,8 +97,8 @@ After the upgrades, `npm audit --omit=dev` reports no vulnerabilities in the run
 
 | ID | Package | Used | Severity | Exposure | Fix |
 |---|---|---|---|---|---|
-| D1 | `undici` 7.16.0 | At runtime, for every VSP 360 request | High (25 advisories), **fixed on `main`** | Mostly in features the server doesn't use (WebSockets, caching, cookies, retry interceptors). The ones that apply are unbounded decompression of responses (GHSA-g9mf-h72j-4rw9, GHSA-3xpg-4rpp-hhhm), which lets VSP 360, or anything that can tamper with its responses, exhaust memory. | Upgraded to 7.30.0 |
-| D2 | `yaml` 2.8.1 | At runtime, to parse the spec | Moderate (GHSA-48c2-rrv3-qjmp), **fixed on `main`** | Only matters if `VSP360_SPEC` points at an untrusted file | Upgraded to 2.9.1 |
+| D1 | `undici` 7.16.0 | At runtime, for every VSP 360 request | High (25 advisories), **fixed in 0.1.17** | Mostly in features the server doesn't use (WebSockets, caching, cookies, retry interceptors). The ones that apply are unbounded decompression of responses (GHSA-g9mf-h72j-4rw9, GHSA-3xpg-4rpp-hhhm), which lets VSP 360, or anything that can tamper with its responses, exhaust memory. | Upgraded to 7.30.0 |
+| D2 | `yaml` 2.8.1 | At runtime, to parse the spec | Moderate (GHSA-48c2-rrv3-qjmp), **fixed in 0.1.17** | Only matters if `VSP360_SPEC` points at an untrusted file | Upgraded to 2.9.1 |
 | D3 | `node-forge`, `tmp` (via `@anthropic-ai/mcpb`) | At build time only | High | Not shipped in any package; used only when packing the `.mcpb` | Track upstream; no fix published for `node-forge` yet |
 
 ### Controls verified as working

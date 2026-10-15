@@ -1,6 +1,6 @@
 {
   "name": "vsp360-mcp",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "description": "MCP server for the Hitachi VSP 360 1.4 REST API, generated from its OpenAPI spec",
   "license": "MIT",
   "type": "module",
@@ -10,7 +10,8 @@
   "files": [
     "dist",
     "spec",
-    "INSTALL.md"
+    "INSTALL.md",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsc",
@@ -21,7 +22,8 @@
     "collect-batch": "node tests/collect-batch.mjs",
     "train-decision": "node tests/train-decision.mjs",
     "test": "npm run build && node --test \"tests/unit/*.test.mjs\" && node tests/search-eval.mjs",
-    "package": "npm run build && node scripts/package.mjs"
+    "package": "npm run build && node scripts/package.mjs",
+    "prepublishOnly": "npm test"
   },
   "engines": {
     "node": ">=20"
@@ -36,5 +38,22 @@
     "@anthropic-ai/sdk": "^0.134.0",
     "@types/node": "22.18.8",
     "typescript": "5.9.3"
-  }
+  },
+  "author": "Vinod Subramaniam",
+  "homepage": "https://github.com/visubramaniam/vsp360-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/visubramaniam/vsp360-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/visubramaniam/vsp360-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "hitachi",
+    "vsp360",
+    "storage"
+  ]
 }

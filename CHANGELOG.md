@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.17 — 2026-10-14
 
 ### Security
 
@@ -9,6 +9,7 @@
 
 ### Added
 
+- **npm registry.** The package is published on npm as `vsp360-mcp`, so it installs with `npm install -g vsp360-mcp` or runs with `npx vsp360-mcp`. From the next release on, the Release workflow publishes it with npm trusted publishing, which needs no stored token and adds a provenance attestation. `package.json` now has repository, homepage, issue tracker, author and keyword fields, and `npm publish` runs the tests first.
 - **INSTALL.md**, a guide to installing and deploying the server with each package: the Claude Desktop extension, standalone, npm, Docker and source. It also covers Claude Code and Claude Desktop setup, CI/CD pipelines, checksums, upgrading and uninstalling. It's included in the release packages.
 - **SECURITY.md**, with how to report a vulnerability, the security model, and the results of a security review.
 

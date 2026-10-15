@@ -1,8 +1,9 @@
 name: Release
 
 # Pushing a v* tag builds every package, attaches them to the tag's GitHub release
-# (created from the tag's CHANGELOG.md section if it does not exist yet) and pushes the
-# multi-arch Docker image. Run it by hand to rebuild the packages for an existing tag.
+# (created from the tag's CHANGELOG.md section if it does not exist yet), publishes the npm
+# package unless that version is already on npm, and pushes the multi-arch Docker image.
+# Run it by hand to rebuild the packages for an existing tag.
 on:
   push:
     tags: ["v*"]
@@ -60,6 +61,35 @@ jobs:
             gh release create "$TAG" --verify-tag --title "$VERSION" --notes-file notes.md
           fi
           gh release upload "$TAG" release/*.tgz release/*.mcpb release/*.tar.gz release/*.zip release/SHA256SUMS --clobber
+
+  npm:
+    # Publishes the exact .tgz attached to the release, using npm trusted publishing: npm checks
+    # this workflow's OIDC token, so no npm token is stored, and adds a provenance attestation.
+    # The trusted publisher is configured on npmjs.com (package settings, workflow release.yml).
+    runs-on: ubuntu-latest
+    needs: packages
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Publish to npm
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.packages.outputs.version }}
+        run: |
+          if npm view "vsp360-mcp@$VERSION" version >/dev/null 2>&1; then
+            echo "vsp360-mcp@$VERSION is already on npm; nothing to publish"
+            exit 0
+          fi
+          gh release download "$TAG" --pattern "vsp360-mcp-$VERSION.tgz" --pattern SHA256SUMS
+          grep " vsp360-mcp-$VERSION.tgz$" SHA256SUMS | sha256sum -c -
+          npm install -g npm@11.6.2
+          npm publish "vsp360-mcp-$VERSION.tgz" --access public
 
   docker:
     runs-on: ubuntu-latest
