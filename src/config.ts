@@ -23,6 +23,17 @@ export function loadOptionalJson<T>(path: string | undefined, what: string, fall
   return path && existsSync(path) ? loadJson<T>(path, what) : fallback;
 }
 
+/**
+ * Removes settings that hold an unfilled `${user_config.x}` placeholder. Claude Desktop passes an optional
+ * setting left empty (CA certificate, download folder) through as the literal placeholder, which would
+ * otherwise be read as a relative path.
+ */
+export function dropUnfilledSettings(env: NodeJS.ProcessEnv = process.env): void {
+  for (const [k, v] of Object.entries(env)) {
+    if (k.startsWith("VSP360_") && v && /^\$\{user_config\.[^}]*\}$/.test(v.trim())) delete env[k];
+  }
+}
+
 export const VERSION: string = loadJson<{ version: string }>(bundled("package.json"), "package.json").version;
 
 export interface ServerConfig {
