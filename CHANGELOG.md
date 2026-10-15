@@ -7,6 +7,10 @@
 - **Docker builds no longer hang under emulation.** The image's build and dependency stages now run on the build machine's own platform and only the final stage is per platform, so multi-arch builds don't run `npm` under QEMU. In the 0.1.19 release, `npm ci` crashed there (SIGILL) and the build hung. The Release workflow's Docker job also stops after 30 minutes instead of hanging.
 - **Docker actions on Node.js 24.** The Release workflow uses `docker/setup-qemu-action@v4`, `docker/setup-buildx-action@v4`, `docker/login-action@v4` and `docker/build-push-action@v7`, which run on Node.js 24, instead of the versions GitHub was forcing off its deprecated Node.js 20.
 
+### Changed
+
+- **Named as a community project.** The README, package description, Docker image labels and Claude Desktop extension now call vsp360-mcp a "Community MCP server for Hitachi VSP 360" and say it isn't an official Hitachi Vantara product. The extension shows as **Hitachi VSP 360 (Community)** in Claude Desktop's settings.
+
 ## 0.1.19 — 2026-10-15
 
 ### Changed

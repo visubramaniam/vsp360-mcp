@@ -1,10 +1,10 @@
 {
   "manifest_version": "0.2",
   "name": "vsp360-mcp",
-  "display_name": "Hitachi VSP 360",
+  "display_name": "Hitachi VSP 360 (Community)",
   "version": "0.0.0",
-  "description": "Query and manage Hitachi VSP 360 through its REST API.",
-  "long_description": "Gives Claude access to all 264 operations of the Hitachi VSP 360 1.4 REST API through three discovery tools: find an operation, read its parameters, then call it. The server is read-only by default; operations that change state are refused unless you turn on Allow writes.",
+  "description": "Community MCP server for Hitachi VSP 360: query and manage VSP 360 through its REST API.",
+  "long_description": "Gives Claude access to all 264 operations of the Hitachi VSP 360 1.4 REST API through three discovery tools: find an operation, read its parameters, then call it. The server is read-only by default; operations that change state are refused unless you turn on Allow writes. This is a community project, not an official Hitachi Vantara product.",
   "author": {
     "name": "Vinod Subramaniam"
   },

@@ -1,5 +1,7 @@
 # Running vsp360-mcp with Docker
 
+vsp360-mcp is a community MCP server for Hitachi VSP 360. It isn't an official Hitachi Vantara product.
+
 `vsp360-mcp` is also published as a container image. Running it this way means you don't need to install Node.js or build anything; all you need is Docker.
 
 ```
