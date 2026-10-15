@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Security
+
+- **No real environment data in the repository (SECURITY.md S2).** Six report files with live VSP 360 data are no longer tracked, and `reports/` is ignored except `reports/decisions.jsonl`. Array names, serial numbers, and application and policy names in the test questions and an MQL example are replaced with placeholders. Earlier commits still contain the data.
+
 ## 0.1.19 — 2026-10-15
 
 ### Changed

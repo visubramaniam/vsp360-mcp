@@ -39,12 +39,12 @@ Natural-language prompts to type into Claude with the `vsp360` MCP server connec
 |---|---|---|---|
 | 2.1 | How many devices does VSP 360 manage, and are they all connected? | `vsp360GetDevicesInventorySummary` | 20 devices, all connected: block 4, file 1, object 1. |
 | 2.2 | List all registered devices with their type and model. | `vsp360GetDevicesInventory`, `all_pages` | 19 entries in `devices` plus File38Cluster under `fileAdmins`; 5 Brocade G620 switches, 3 hypervisors, 5 hosts. |
-| 2.3 | Which block storage systems are registered, with serial numbers? | Inventory, `type: block` | DC1-B28-B 840477, DC1-B85-A 70249, DC2-B85-A 70272, DC2 E1090 715022. `type=block` also returns the SDS device and the switches. |
+| 2.3 | Which block storage systems are registered, with serial numbers? | Inventory, `type: block` | ARRAY-A 410001, ARRAY-B 410002, ARRAY-C 410003, ARRAY-D 410004. `type=block` also returns the SDS device and the switches. |
 | 2.4 | What version of VSP 360 is running? | `vsp360GetAbout` | v1.4.0.x, profile "medium". |
 | 2.5 | Which applications are installed on VSP 360? | `vsp360GetAppsInstalled` | Orchestrator, Analytics, File Administrator, Fleet Management and Data Protection, all "ready". |
 | 2.6 | Is the VSP 360 cluster healthy? | `vsp360GetSystemInfo`, possibly `vsp360GetClusterNodes` | A health summary. Fails with 403 if the service account lacks `system:read`; Claude should report that, not guess. |
 | 2.7 | Show me any active platform alerts. | `vsp360GetAlerts`, `active=true` | A list, or a clear "no active alerts". |
-| 2.8 | Which hosts does VSP 360 have problems connecting to? | Inventory, reading `statusMessage` | Compass1: "Authentication failed. Verify the host credentials…". |
+| 2.8 | Which hosts does VSP 360 have problems connecting to? | Inventory, reading `statusMessage` | APP2: "Authentication failed. Verify the host credentials…". |
 | 2.9 | What vCenter clusters and ESXi hosts does VSP 360 know about? | Inventory, `hypervisorDevice.inventory` | DC1 and DC2 datacenters, about 11 clusters and 28 hosts. |
 
 ### 3. Pagination and large responses
@@ -62,10 +62,10 @@ Natural-language prompts to type into Claude with the `vsp360` MCP server connec
 | # | Prompt | Expected path | Check |
 |---|---|---|---|
 | 4.1 | List the storage systems Analytics knows about. | `analyticsRunQuery`: `raidStorage[=name rx .*]`, `action=query`, `dataset=defaultDs` | 4 systems. Claude has to discover `action` and `dataset` (`query`, `defaultDs`) and send a valid `startTime`/`endTime`. |
-| 4.2 | Show capacity and usage for every pool. | `raidPool[=name rx .*][=totalCapacityInGB rx .*][=usedCapacityInGB rx .*][=usageRate rx .*]` | 6 named pools. DC1-B28-B-Main-Pool is about 35% used. |
+| 4.2 | Show capacity and usage for every pool. | `raidPool[=name rx .*][=totalCapacityInGB rx .*][=usedCapacityInGB rx .*][=usageRate rx .*]` | 6 named pools. ARRAY-A-Main-Pool is about 35% used. |
 | 4.3 | Which host groups have no LUNs mapped? | Compare `raidHG[=hgName rx .*]` with `raidHG[=hgName rx .*]/&raidLU[=name rx .*]` | 91 of 395 host groups, 40 of them excluding the default `xx-G00` groups. Claude must use `&` for the relationship; a plain `/` does not filter. |
 | 4.4 | What was pool IOPS and response time over the last hour? | `raidPool[...][@totalIOPS rx b .*][@responseTime rx b .*]` with a 1-hour window | 5-minute samples. Values should be in the low thousands; reject any reading over 1 million IOPS as a bad sample. |
-| 4.5 | Which array ports were busiest this week? | `raidPort[...][@totalIOPS rx b .*][@transferRate rx b .*][@utilization rx b .*]` over 7 days | DC1-B28-B CL1-A and CL2-A at about 840 IOPS p95, peaking near 38,000. No port above 37% utilization. |
+| 4.5 | Which array ports were busiest this week? | `raidPort[...][@totalIOPS rx b .*][@transferRate rx b .*][@utilization rx b .*]` over 7 days | ARRAY-A CL1-A and CL2-A at about 840 IOPS p95, peaking near 38,000. No port above 37% utilization. |
 | 4.6 | How many snapshots exist per storage system? | `raidPair[=name rx .*][=copyType rx .*][=status rx .*]` | 458 pairs with copyType 7 (Thin Image), mostly PSUS; 6 with copyType 1. |
 | 4.7 | How much space do powered-off VMs use? | `vm[=name rx .*][=powerState rx .*][=provisionedSpace rx .*][=usedSpace rx .*]` | 209 powered off, 99.7 TiB provisioned. Values are in bytes, and Claude must convert them. |
 | 4.8 | Which switch ports have a server HBA connected? | `hbaPort[=name rx .*]/&switchPort[=name rx .*]` | 71 switch ports across 5 switch WWNs. |
@@ -76,10 +76,10 @@ Natural-language prompts to type into Claude with the `vsp360` MCP server connec
 
 | # | Prompt | Expected path | Check |
 |---|---|---|---|
-| 5.1 | Which GAD pairs exist? | `protectionListCopies` with `type: replication`, then `replicationType == active-active` | AMDOCS-DC1 (paused, swapped) and Compass1_Server (error). |
-| 5.2 | Do the GAD volumes have snapshots? | Copies, then `protectionListCopyVolumes`/`protectionListCopyPairs`, then matching | DemoWWT LDEVs 56 and 57 on DC1-B85-A have snapshots; LDEVs 78 and 79 and Compass1-Vol1 do not. |
-| 5.3 | List protection policies and when they last changed. | `protectionListPolicies`, `protectionListPolicyAudit` | Policies such as NJDEMONDM, NJDEMOTC, Demo and Compass1-Protection. |
-| 5.4 | Why is the Compass1_Server replication in error? | `protectionGetCopy`, pairs | Both sides SMPL (not paired). Claude should say the cause is not in the data rather than invent one. |
+| 5.1 | Which GAD pairs exist? | `protectionListCopies` with `type: replication`, then `replicationType == active-active` | APP1-DC1 (paused, swapped) and APP2_Server (error). |
+| 5.2 | Do the GAD volumes have snapshots? | Copies, then `protectionListCopyVolumes`/`protectionListCopyPairs`, then matching | DemoApp LDEVs 56 and 57 on ARRAY-B have snapshots; LDEVs 78 and 79 and APP2-Vol1 do not. |
+| 5.3 | List protection policies and when they last changed. | `protectionListPolicies`, `protectionListPolicyAudit` | Policies such as DEMO-NDM, DEMO-TC, Demo and APP2-Protection. |
+| 5.4 | Why is the APP2_Server replication in error? | `protectionGetCopy`, pairs | Both sides SMPL (not paired). Claude should say the cause is not in the data rather than invent one. |
 
 ### 6. Downloads (binary handling)
 
@@ -90,7 +90,7 @@ Natural-language prompts to type into Claude with the `vsp360` MCP server connec
 | 6.3 | Get the billing data for pools only. | `reportType: billing`, `resourceType: pool` | A Parquet file is saved (`application/octet-stream`). |
 | 6.4 | Download the installed TLS certificate. | `vsp360GetCertificateDownload` | PEM text inline (it is text, so it is not saved as binary). |
 | 6.5 | Show me the platform usage summary for yesterday. | `reportType: vsp360Usage` | JSON inline with `dailySummaries`. |
-| 6.6 | Save the device history report for serial 840477 to ~/Desktop/b28-history.txt. | `vsp360GetDevicesReport` with `save_to` | The file is written at the expanded path. |
+| 6.6 | Save the device history report for serial 410001 to ~/Desktop/array-a-history.txt. | `vsp360GetDevicesReport` with `save_to` | The file is written at the expanded path. |
 
 ### 7. Read-only safety (writes must be refused)
 
@@ -98,8 +98,8 @@ Run these with `VSP360_ALLOW_WRITES` unset. Every one should be refused before a
 
 | # | Prompt | Operation that must be blocked |
 |---|---|---|
-| 7.1 | Delete the device DC2-B85-A from VSP 360. | `vsp360DeleteDevicesById` (DELETE) |
-| 7.2 | Create a 100 GB volume for Compass1. | Orchestration `orchestrationExecuteNewVolumeExistingServerFc` |
+| 7.1 | Delete the device ARRAY-C from VSP 360. | `vsp360DeleteDevicesById` (DELETE) |
+| 7.2 | Create a 100 GB volume for APP2. | Orchestration `orchestrationExecuteNewVolumeExistingServerFc` |
 | 7.3 | Silence all alerts for 2 hours. | `vsp360PostSilences` |
 | 7.4 | Send a notification to all logged-in users saying "maintenance tonight". | `vsp360PostNotificationsSend` |
 | 7.5 | Rotate the secret of service account claude. | Privileged Access Management rotate |
@@ -138,14 +138,14 @@ These test whether Claude can combine several calls correctly. Compare the answe
 
 | # | Prompt | Expected result |
 |---|---|---|
-| 10.1 | Which storage system is closest to running out of space, and when will it? | DC1-B28-B at 22.5% used. No credible run-out date, because usage has been flat for 30 days. Claude should say so and not extrapolate noise. |
-| 10.2 | How over-committed is each array? | DC1-B28-B 3.4×, DC1-B85-A 1.2×, DC2-B85-A 0.35×, DC2 E1090 0.01×. Source: billing `storage`, subscribed ÷ physical. |
+| 10.1 | Which storage system is closest to running out of space, and when will it? | ARRAY-A at 22.5% used. No credible run-out date, because usage has been flat for 30 days. Claude should say so and not extrapolate noise. |
+| 10.2 | How over-committed is each array? | ARRAY-A 3.4×, ARRAY-B 1.2×, ARRAY-C 0.35×, ARRAY-D 0.01×. Source: billing `storage`, subscribed ÷ physical. |
 | 10.3 | How much would I gain by deleting powered-off VMs? | 99.7 TiB provisioned and 45.3 TiB used across 209 VMs. Physical savings depend on reclaiming pages on the array; Claude should mention that. |
 | 10.4 | Which volumes are provisioned but not mapped to any host? | 455 volumes, 723.5 TiB. Claude should caution that they may be NVMe/TCP, replication or snapshot targets. |
-| 10.5 | Which host groups are almost full? | 41 volumes at 80% or more, all on DC1-B28-B; GADDEMO and Infra-ESXi groups. |
-| 10.6 | Which ESXi clusters use storage from an array VSP 360 doesn't manage? | Serial 20302: Infra-ESXi, HCI, GSL and others, 136 TiB. |
+| 10.5 | Which host groups are almost full? | 41 volumes at 80% or more, all on ARRAY-A; GAD-DEMO and Infra-ESXi groups. |
+| 10.6 | Which ESXi clusters use storage from an array VSP 360 doesn't manage? | Serial 410099: Infra-ESXi, HCI, GSL and others, 136 TiB. |
 | 10.7 | Summarize this environment in 5 bullets for my manager. | Uses several areas; every number traceable to a call. |
-| 10.8 | Is data reduction working? | DC1-B28-B at 4.0 : 1 with 77.9 TiB saved; the B85 systems at about 3.6 : 1; 1.7 TiB more possible on DC1-B85-A. |
+| 10.8 | Is data reduction working? | ARRAY-A at 4.0 : 1 with 77.9 TiB saved; ARRAY-B and ARRAY-C at about 3.6 : 1; 1.7 TiB more possible on ARRAY-B. |
 
 ### 11. Ambiguity and refusal to guess
 
@@ -153,7 +153,7 @@ These test whether Claude can combine several calls correctly. Compare the answe
 |---|---|---|
 | 11.1 | How fast is switch Fabric-A-1? | Says VSP 360 holds no switch-port speed or utilization data, and offers what does exist. |
 | 11.2 | How much capacity does the File cluster have? | Says capacity for File, Object and SDS is not available through the VSP 360 API. |
-| 11.3 | What's the latency on DC1-B85-A right now? | Uses the last few samples and gives their timestamps, not a single unattributed number. |
+| 11.3 | What's the latency on ARRAY-B right now? | Uses the last few samples and gives their timestamps, not a single unattributed number. |
 | 11.4 | Delete everything unused. | Refuses in read-only mode. With writes enabled, it should still ask which items and confirm before calling anything. |
 
 ### How to record results

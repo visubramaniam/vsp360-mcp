@@ -39,14 +39,14 @@ The safest configuration for unattended or shared use is read-only, with `VSP360
 | **Method** | Static review of `src/`, the packaging script, the `.mcpb` manifest, the Dockerfile and the GitHub workflows. Findings were tested by running the compiled server's functions locally against a mock HTTP server, plus `npm audit` for dependencies. |
 | **Not covered** | Behaviour of a live VSP 360, Windows path handling, and Linux-only paths (reasoned about, not run) |
 
-No critical or high-severity issues were found in the server's own code. The most important problems were an upload path that read-only mode didn't fully close (S1), environment data in the public repository (S2), and a vulnerable `undici` version (D1). S1, D1 and D2 are fixed in 0.1.17; the rest are open.
+No critical or high-severity issues were found in the server's own code. The most important problems were an upload path that read-only mode didn't fully close (S1), environment data in the public repository (S2), and a vulnerable `undici` version (D1). S1, D1 and D2 are fixed in 0.1.17, and S2 in 0.1.20; the rest are open.
 
 ### Findings in the code
 
 | ID | Severity | Finding | Status |
 |---|---|---|---|
 | S1 | Medium | Read-only mode allows a file upload | Fixed in 0.1.17 |
-| S2 | Medium | The public repository contains data from a real environment | Open |
+| S2 | Medium | The public repository contains data from a real environment | Fixed in 0.1.20 (earlier commits still hold it) |
 | S3 | Low | Redirects are followed, including for the token request | Open |
 | S4 | Low | `vsp360VerifyDirectory` is treated as read-only but can make VSP 360 connect to any LDAP host | Open |
 | S5 | Low | `analyticsRunQuery` is treated as read-only whatever its `action` is | Open |
@@ -63,6 +63,7 @@ No critical or high-severity issues were found in the server's own code. The mos
 
 **S2 — Environment data in the public repository (Medium).** Files under `reports/`, and some examples in `tests/` and `src/analyticsfields.ts`, contain names, serial numbers, WWNs, host names and private IP addresses from a real storage environment. `reports/` is not in `.gitignore`, so new reports with live data are easy to commit by mistake.
 *Fix:* remove those files and identifiers, and rewrite history if the data mustn't stay public. Add `reports/` to `.gitignore`, and replace real identifiers in examples with placeholders.
+*Fixed in 0.1.20:* the six report files with live data are no longer tracked, and `.gitignore` now ignores `reports/` except `reports/decisions.jsonl`, which holds no environment data. In `tests/` and `src/analyticsfields.ts`, array names, serial numbers, and application and policy names are replaced with placeholders (`ARRAY-A`, `410001`, `APP1-DC1`, …). The data remains in the repository's earlier commits; removing it from there needs a history rewrite and a force-push, which hasn't been done.
 
 **S3 — Redirects are followed (Low).** No request sets a redirect policy (`src/client.ts`). If the token endpoint returns a 307 or 308 redirect to another host, the token request body, which contains the client secret, is sent to that host. The `Authorization` header on API requests is dropped on cross-origin redirects, so API calls are not affected. This needs a misbehaving gateway, or a man-in-the-middle when `VSP360_INSECURE_TLS=true`.
 *Fix:* `redirect: "error"` on the token request, and refuse cross-origin redirects on API requests.
