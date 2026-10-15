@@ -2,10 +2,12 @@
 // any call that got past the server's own checks would fail with a network error rather than reach a system.
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { Spec } from "../../dist/spec.js";
+import { Spec, isMultipart } from "../../dist/spec.js";
 
 const SERVER = new URL("../../dist/index.js", import.meta.url).pathname;
 const spec = new Spec(new URL("../../spec/Platform-vsp360-openapi.yaml", import.meta.url).pathname);
@@ -53,12 +55,33 @@ test("the secret read is refused unless VSP360_ALLOW_SECRET_READS is set", async
   assert.match(textOf(d), /returns a secret \(blocked/);
 });
 
+test("read-only mode refuses uploads unless VSP360_UPLOAD_DIR is set", async () => {
+  const id = "vsp360PostDevicesEnrollmentTemplateValidate";
+  const args = { operationId: id, params: { deviceType: "Storage" }, files: { file: SERVER } };
+  const ro = await server();
+  const r1 = await ro.callTool({ name: "vsp360_call_operation", arguments: args });
+  assert.ok(r1.isError);
+  assert.match(textOf(r1), /read-only mode allows only from VSP360_UPLOAD_DIR/);
+  assert.match(textOf(await ro.callTool({ name: "vsp360_describe_operation", arguments: { operationId: id } })), /uploads a file \(blocked/);
+
+  // With the folder set, the call gets past the gate and the client confines the file to that folder.
+  const dir = mkdtempSync(join(tmpdir(), "vsp360-uploads-"));
+  const scoped = await server({ VSP360_UPLOAD_DIR: dir });
+  assert.match(textOf(await scoped.callTool({ name: "vsp360_call_operation", arguments: args })), /outside VSP360_UPLOAD_DIR/);
+
+  // With writes allowed, uploads follow the usual rules.
+  const rw = await server({ VSP360_ALLOW_WRITES: "true" });
+  assert.doesNotMatch(textOf(await rw.callTool({ name: "vsp360_call_operation", arguments: args })), /VSP360_UPLOAD_DIR/);
+});
+
 test("direct tools exclude writes and the secret read in read-only mode, and all names are valid", async () => {
   const c = await server({ VSP360_TOOLSETS: "all" });
   const { tools } = await c.listTools();
   const direct = tools.filter((t) => !t.name.startsWith("vsp360_"));
-  const readable = [...spec.operations.values()].filter((o) => o.readOnly && !o.secret);
+  // The read-only upload is excluded too, because VSP360_UPLOAD_DIR is not set.
+  const readable = [...spec.operations.values()].filter((o) => o.readOnly && !o.secret && !isMultipart(o));
   assert.equal(direct.length, readable.length);
+  assert.ok(!direct.some((t) => t.name === "vsp360PostDevicesEnrollmentTemplateValidate"));
   for (const t of tools) {
     assert.match(t.name, /^[A-Za-z0-9_.-]{1,64}$/);
     for (const p of Object.keys(t.inputSchema.properties ?? {})) assert.match(p, /^[A-Za-z0-9_.-]{1,64}$/, `${t.name}.${p}`);

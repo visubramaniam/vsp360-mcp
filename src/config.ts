@@ -29,6 +29,8 @@ export interface ServerConfig {
   specPath: string;
   allowWrites: boolean;
   allowSecretReads: boolean;
+  /** VSP360_UPLOAD_DIR is set; the client enforces the folder itself. */
+  uploadDirSet: boolean;
   toolsets: string[];
   examplesPath: string;
   analyticsFieldsPath: string;
@@ -47,6 +49,7 @@ export function loadServerConfig(env = process.env): ServerConfig {
     specPath: env.VSP360_SPEC || bundled("spec", "Platform-vsp360-openapi.yaml"),
     allowWrites: env.VSP360_ALLOW_WRITES === "true",
     allowSecretReads: env.VSP360_ALLOW_SECRET_READS === "true",
+    uploadDirSet: Boolean(env.VSP360_UPLOAD_DIR),
     toolsets: (env.VSP360_TOOLSETS ?? "").split(",").map((s) => s.trim()).filter(Boolean),
     // An empty VSP360_EXAMPLES turns the example questions off.
     examplesPath: env.VSP360_EXAMPLES ?? bundled("spec", "examples.json"),

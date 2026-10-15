@@ -71,7 +71,7 @@ All other operations are refused, and direct tools are not created for them. The
 
 **Reads that return secrets.** One read, `vsp360GetServiceAccountSecret`, returns a service account's live client secret, which would then become part of the conversation. Every other read masks secrets. That read is refused, whether or not writes are allowed, unless `VSP360_ALLOW_SECRET_READS=true`.
 
-**Local files.** Claude chooses `save_to` and upload paths, so text it reads from the API could try to steer them. `save_to` therefore only writes inside `VSP360_DOWNLOAD_DIR` and never overwrites a file (set `VSP360_SAVE_ANYWHERE=true` to lift the folder rule). Uploads refuse hidden files and folders such as `~/.ssh` or `.env`; set `VSP360_UPLOAD_DIR` to allow uploads only from one folder.
+**Local files.** Claude chooses `save_to` and upload paths, so text it reads from the API could try to steer them. `save_to` therefore only writes inside `VSP360_DOWNLOAD_DIR` and never overwrites a file (set `VSP360_SAVE_ANYWHERE=true` to lift the folder rule). Uploads refuse hidden files and folders such as `~/.ssh` or `.env`; set `VSP360_UPLOAD_DIR` to allow uploads only from one folder. In read-only mode, the one upload allowed (CSV validation) is refused unless `VSP360_UPLOAD_DIR` is set, because it would otherwise let a steered model send any local file to VSP 360.
 
 ## Features
 
@@ -186,7 +186,7 @@ To try the tools interactively, run `npm run inspect`. It opens the MCP Inspecto
 | `VSP360_MAX_RESPONSE_CHARS` | `60000` | Truncation limit for text responses |
 | `VSP360_DOWNLOAD_DIR` | `~/Downloads/vsp360-mcp` | Where binary downloads and `save_to` files are written |
 | `VSP360_SAVE_ANYWHERE` | `false` | Let `save_to` write outside `VSP360_DOWNLOAD_DIR` |
-| `VSP360_UPLOAD_DIR` | *(any non-hidden path)* | Only allow uploads from inside this folder |
+| `VSP360_UPLOAD_DIR` | *(any non-hidden path)* | Only allow uploads from inside this folder. In read-only mode, uploads are refused unless it's set. |
 | `VSP360_PATH_REWRITES` | `/api/v1/protection=/dataprotection/api/v1/protection` | Path prefixes to rewrite, as comma-separated `/from=/to` pairs. The Data Protection service's pagination (`next`) links leave out its `/dataprotection` gateway prefix; the default puts it back. It also lets older specs without the prefix work. |
 | `VSP360_ANALYTICS_FIELDS` | bundled `spec/analytics-fields.json` | MQL resource types and attributes added to `analyticsRunQuery`'s description. |
 | `VSP360_EXAMPLES` | bundled `spec/examples.json` | Example user questions per operation, used to rank search results. Set to an empty string to turn them off. |

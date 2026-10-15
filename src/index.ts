@@ -64,6 +64,11 @@ function blockedReason(op: Operation): string | undefined {
   if (!op.readOnly && !cfg.allowWrites) {
     return `${op.operationId} (${op.method} ${op.path}) changes VSP 360 state and the server is running read-only. Set VSP360_ALLOW_WRITES=true in the MCP server configuration to enable write operations.`;
   }
+  // A read-only upload (validating a CSV) still sends a local file to VSP 360, so in read-only mode it may only
+  // come from the folder the user chose; otherwise a steered model could upload any non-hidden file.
+  if (isMultipart(op) && !cfg.allowWrites && !cfg.uploadDirSet) {
+    return `${op.operationId} uploads a local file, which read-only mode allows only from VSP360_UPLOAD_DIR. Set VSP360_UPLOAD_DIR in the MCP server configuration to the folder uploads may come from.`;
+  }
   if (op.secret && !cfg.allowSecretReads) {
     return `${op.operationId} returns a credential in clear text, which would then be part of the conversation. It is blocked unless VSP360_ALLOW_SECRET_READS=true is set in the MCP server configuration.`;
   }
@@ -96,7 +101,7 @@ function accessLabel(op: Operation): string {
   const blocked = blockedReason(op);
   if (op.secret) return blocked ? "read, returns a secret (blocked: set VSP360_ALLOW_SECRET_READS=true)" : "read, returns a secret";
   if (!op.readOnly) return blocked ? "write (blocked: server is read-only; set VSP360_ALLOW_WRITES=true)" : "write";
-  return "read";
+  return blocked ? "read, uploads a file (blocked: set VSP360_UPLOAD_DIR)" : "read";
 }
 
 function listOperations(args: Json) {

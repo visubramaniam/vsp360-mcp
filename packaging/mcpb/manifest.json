@@ -30,7 +30,8 @@
         "VSP360_ALLOW_WRITES": "${user_config.allow_writes}",
         "VSP360_CA_CERT": "${user_config.ca_cert}",
         "VSP360_INSECURE_TLS": "${user_config.insecure_tls}",
-        "VSP360_DOWNLOAD_DIR": "${user_config.download_dir}"
+        "VSP360_DOWNLOAD_DIR": "${user_config.download_dir}",
+        "VSP360_UPLOAD_DIR": "${user_config.upload_dir}"
       }
     }
   },
@@ -94,6 +95,12 @@
       "type": "directory",
       "title": "Download folder",
       "description": "Optional. Where downloaded files are saved. Defaults to ~/Downloads/vsp360-mcp",
+      "required": false
+    },
+    "upload_dir": {
+      "type": "directory",
+      "title": "Upload folder",
+      "description": "Optional. The only folder files may be uploaded from. Read-only mode refuses uploads unless this is set.",
       "required": false
     }
   }

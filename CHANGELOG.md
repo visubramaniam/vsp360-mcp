@@ -2,9 +2,15 @@
 
 ## Unreleased
 
+### Security
+
+- **Uploads in read-only mode need `VSP360_UPLOAD_DIR`.** Read-only mode allows one upload, the bulk-registration CSV check (`vsp360PostDevicesEnrollmentTemplateValidate`). Without an upload folder, a model steered by injected text could use it to send any local file that isn't hidden to VSP 360. In read-only mode, that operation is now refused, and has no direct tool, unless `VSP360_UPLOAD_DIR` is set. The Claude Desktop extension has a new **Upload folder** setting for this. (SECURITY.md S1)
+- **Dependency updates.** `undici` is updated from 7.16.0 to 7.30.0, fixing 25 advisories, including unbounded decompression of responses. `yaml` is updated from 2.8.1 to 2.9.1, fixing a stack overflow on deeply nested YAML. (SECURITY.md D1, D2)
+
 ### Added
 
 - **INSTALL.md**, a guide to installing and deploying the server with each package: the Claude Desktop extension, standalone, npm, Docker and source. It also covers Claude Code and Claude Desktop setup, CI/CD pipelines, checksums, upgrading and uninstalling. It's included in the release packages.
+- **SECURITY.md**, with how to report a vulnerability, the security model, and the results of a security review.
 
 ## 0.1.16 — 2026-10-14
 
