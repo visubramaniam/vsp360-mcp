@@ -1,7 +1,11 @@
 # syntax=docker/dockerfile:1
 
+# The build and dependency stages run on the build machine's own platform (--platform=$BUILDPLATFORM): their
+# output is plain JavaScript (no native modules), the same for every target. Only the final stage is per
+# platform, so multi-arch builds don't run npm under QEMU emulation, where it can crash (SIGILL) and hang.
+
 # ---- build: compile TypeScript and pre-parse the spec ----
-FROM node:22-alpine AS build
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
@@ -11,7 +15,13 @@ COPY spec ./spec
 COPY scripts/cache-spec.mjs ./scripts/
 RUN npm run build
 
-# ---- runtime: production dependencies only ----
+# ---- production dependencies ----
+FROM --platform=$BUILDPLATFORM node:22-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+
+# ---- runtime ----
 FROM node:22-alpine
 LABEL org.opencontainers.image.title="vsp360-mcp" \
       org.opencontainers.image.description="Community MCP server for Hitachi VSP 360 (not an official Hitachi Vantara product)" \
@@ -21,7 +31,7 @@ WORKDIR /app
 ENV NODE_ENV=production \
     VSP360_DOWNLOAD_DIR=/downloads
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
+COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY spec ./spec
 RUN mkdir -p /downloads && chown node:node /downloads
