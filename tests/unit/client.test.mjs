@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { MockAgent } from "undici";
 import { Spec } from "../../dist/spec.js";
-import { Vsp360Client, loadConfig } from "../../dist/client.js";
+import { Vsp360Client, loadConfig, pageUrls } from "../../dist/client.js";
 
 const BASE = "https://vsp.test";
 const spec = new Spec(new URL("../../spec/Platform-vsp360-openapi.yaml", import.meta.url).pathname);
@@ -115,6 +115,65 @@ test("all_pages keeps earlier pages when a later page is not JSON", async () => 
   assert.ok(r.ok);
   assert.match(r.text, /^2 items from 1 page\(s\)/);
   assert.match(r.text, /Stopped at page 2: the response was not a JSON array \(text\/html\)/);
+});
+
+/** Pages that link to `next` and `last` (offset/limit), each reply delayed so parallel fetching is measurable. */
+function linkedPages(n, { delay = 0, badPage } = {}) {
+  const at = (i) => `${BASE}/api/v1/vsp360/users?limit=2&offset=${i * 2}`;
+  for (let i = 0; i < n; i++) {
+    const link = [i < n - 1 ? `<${at(i + 1)}>; rel="next"` : null, `<${at(n - 1)}>; rel="last"`].filter(Boolean).join(", ");
+    const path = i === 0 ? "/api/v1/vsp360/users?limit=2" : `/api/v1/vsp360/users?limit=2&offset=${i * 2}`;
+    const reply = i === badPage
+      ? pool.intercept({ path, method: "GET" }).reply(200, "<html>gateway error</html>", { headers: { "content-type": "text/html", link } })
+      : pool.intercept({ path, method: "GET" }).reply(200, JSON.stringify([{ id: i * 2 }, { id: i * 2 + 1 }]), json(null, { link }));
+    if (delay) reply.delay(delay);
+  }
+}
+
+test("page URLs are worked out from next and last when they differ only in offset", () => {
+  const u = (q) => `${BASE}/x?${q}`;
+  assert.deepEqual(pageUrls(u("limit=2"), u("limit=2&offset=2"), u("limit=2&offset=6"), 10), [u("limit=2&offset=2"), u("limit=2&offset=4"), u("limit=2&offset=6")]);
+  assert.deepEqual(pageUrls(u("offset=0"), u("offset=5"), u("offset=15"), 10), [u("offset=5"), u("offset=10"), u("offset=15")], "step taken from the offsets");
+  assert.deepEqual(pageUrls(u("limit=2"), u("limit=2&offset=2"), u("limit=2&offset=6"), 2), [u("limit=2&offset=2"), u("limit=2&offset=4")], "capped by the page budget");
+  assert.deepEqual(pageUrls(u("limit=2"), u("limit=2&offset=2"), u("limit=3&offset=6"), 10), [], "other parameters differ");
+  assert.deepEqual(pageUrls(u("limit=2"), u("limit=2&offset=2"), u("limit=2&offset=5"), 10), [], "last is not on a page boundary");
+  assert.deepEqual(pageUrls(u("limit=2"), u("limit=2&offset=2"), undefined, 10), [], "no last link");
+  assert.deepEqual(pageUrls(u("limit=2"), u("cursor=abc"), u("cursor=xyz"), 10), [], "not offset-based");
+});
+
+test("all_pages fetches pages in parallel when next and last are known, keeping their order", async () => {
+  tokens();
+  linkedPages(5, { delay: 150 });
+  const started = performance.now();
+  const r = await client.call(op("vsp360ListIdentityUsers"), { all_pages: true, params: { limit: 2 } });
+  const elapsed = performance.now() - started;
+  assert.ok(r.ok, r.text);
+  assert.match(r.text, /^10 items from 5 page\(s\)/);
+  const ids = JSON.parse(r.text.split("\n")[1]).map((x) => x.id);
+  assert.deepEqual(ids, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  // One page, then four at once: about two delays, where one page at a time would take five.
+  assert.ok(elapsed < 600, `took ${elapsed.toFixed(0)} ms`);
+});
+
+test("parallel all_pages respects max_pages and keeps pages before a non-JSON one", async () => {
+  tokens();
+  linkedPages(5);
+  const capped = await client.call(op("vsp360ListIdentityUsers"), { all_pages: true, params: { limit: 2 }, max_pages: 3 });
+  assert.match(capped.text, /^6 items from 3 page\(s\)/);
+  assert.match(capped.text, /Stopped after 3 pages \(max_pages\)/);
+
+  linkedPages(4, { badPage: 2 });
+  const bad = await client.call(op("vsp360ListIdentityUsers"), { all_pages: true, params: { limit: 2 } });
+  assert.ok(bad.ok);
+  assert.match(bad.text, /^4 items from 2 page\(s\)/);
+  assert.match(bad.text, /Stopped at page 3: the response was not a JSON array/);
+});
+
+test("JSON responses are returned compact", async () => {
+  tokens();
+  pool.intercept({ path: "/api/v1/vsp360/about", method: "GET" }).reply(200, '{\n  "version": "1.4",\n  "build": [1, 2]\n}', json());
+  const r = await client.call(op("vsp360GetAbout"), {});
+  assert.ok(r.text.endsWith('{"version":"1.4","build":[1,2]}'), r.text);
 });
 
 test("all_pages with save_to writes every item to the file", async () => {
