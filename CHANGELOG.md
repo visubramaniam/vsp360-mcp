@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **Faster startup, less memory.** `npm run build` now writes a pre-parsed JSON copy of the bundled spec (`dist/openapi-cache.json`), and the server uses it instead of parsing the 2 MB YAML file at every start. On an Apple-silicon Mac, time to ready fell from about 540 ms to 270 ms, and peak memory from about 290 MB to 115 MB. The copy is keyed by the YAML file's SHA-256, so replacing the YAML file still takes effect at once. `VSP360_SPEC` also accepts a JSON file now.
+
 ## 0.1.18 — 2026-10-14
 
 ### Added
