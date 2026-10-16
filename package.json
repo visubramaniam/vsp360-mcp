@@ -1,6 +1,6 @@
 {
   "name": "vsp360-mcp",
-  "version": "0.1.22",
+  "version": "0.1.23",
   "description": "Community MCP server for Hitachi VSP 360: the VSP 360 1.4 REST API for Claude and other MCP clients. Not an official Hitachi Vantara product.",
   "license": "MIT",
   "type": "module",

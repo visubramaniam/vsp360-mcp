@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.1.23 — 2026-10-15
+
+### Tests
+
+- **CI smoke-tests a standalone package.** The `package` job builds the `linux-x64` package, including the signature check of the Node.js runtime's `SHASUMS256.txt`, and runs `tests/smoke/package-smoke.mjs` on it, as the Release workflow does for the Windows packages. The smoke test sets `VSP360_ALLOW_HTTP=true` for its loopback mock VSP 360, which the 0.1.22 Windows package tests lacked; the packages themselves passed when re-tested. (#32)
 
 ### Changed
 
