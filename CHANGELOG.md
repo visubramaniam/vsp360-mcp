@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **CONTRIBUTING.md and CODE_OF_CONDUCT.md.** The contributing guide covers setup, testing, the search evaluation's thresholds, keeping live VSP 360 data out of the repository, and how to make common changes (read-only `POST`s, secret operations, a new spec). The Code of Conduct is the Contributor Covenant 2.1, with reports made privately through the repository's Security tab. The README links both.
+
 ## 0.1.23 — 2026-10-15
 
 ### Tests
