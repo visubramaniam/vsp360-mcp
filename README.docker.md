@@ -32,7 +32,7 @@ To pin a version instead of `latest`, use a release tag, for example `:0.1.23`.
 
 ## 3. Test it from the command line
 
-This checks that the container can sign in to VSP 360 before you connect Claude. Fill in your VSP 360 details:
+This checks that the container starts and accepts its configuration. It does **not** sign in to VSP 360: the server requests a token only when it makes its first API call. Fill in your VSP 360 details:
 
 ```bash
 docker run -i --rm -e VSP360_URL=https://vsp360.example.com -e VSP360_CLIENT_ID=my-service-account -e VSP360_CLIENT_SECRET=REPLACE_ME -e VSP360_INSECURE_TLS=true docker.io/subramaniamv/vsp360-mcp:latest
@@ -44,7 +44,7 @@ You should see:
 [vsp360-mcp] ready: 264 operations, 0 direct tools, read-only
 ```
 
-The server then waits for MCP messages on standard input. Press **Ctrl+C** to stop it. Only use `VSP360_INSECURE_TLS=true` if your VSP 360 has a self-signed certificate; see [TLS certificates](#tls-certificates) below.
+The server then waits for MCP messages on standard input. Press **Ctrl+C** to stop it. To check sign-in and network access, use the checks in [Check that it works](#check-that-it-works) after connecting Claude. Only use `VSP360_INSECURE_TLS=true` if your VSP 360 has a self-signed certificate; see [TLS certificates](#tls-certificates) below.
 
 ## 4. Connect it to Claude
 
