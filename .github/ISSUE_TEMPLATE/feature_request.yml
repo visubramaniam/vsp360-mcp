@@ -1,0 +1,48 @@
+name: Feature request
+description: Suggest a new capability or an improvement.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the [Roadmap](https://github.com/visubramaniam/vsp360-mcp/wiki/Roadmap) first: multiple VSP 360 instances (0.1.24) and the Fleet Management API (0.1.25) are already planned.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The task or question, and what gets in the way today.
+      placeholder: I want to compare alert counts across two data centers in one question, but each needs its own server entry.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help?
+      description: How you'd like it to work. A rough idea is fine.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Workarounds or alternatives
+      description: What you do today, or other ways it could work.
+    validations:
+      required: false
+  - type: dropdown
+    id: safety
+    attributes:
+      label: Does it change what Claude can do on its own?
+      description: For example, new writes, new file access, or sending data somewhere new. These need extra care; see SECURITY.md's security model.
+      options:
+        - "No: it's about reads, search, output or packaging"
+        - "Yes, or I'm not sure"
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contributing
+      options:
+        - label: I'd be willing to open a pull request for this (see CONTRIBUTING.md).
+          required: false

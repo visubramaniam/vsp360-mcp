@@ -1,0 +1,112 @@
+name: Bug report
+description: Something in vsp360-mcp doesn't work as documented.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. **This repository is public.** Before you submit, remove secrets (client secrets, tokens) and anything that identifies your environment: system and array names, serial numbers, WWNs, host names, IP addresses and user names. Replace them with placeholders such as `ARRAY-A`, `410001` or `vsp360.example.com`.
+
+        For a **security problem**, don't open an issue: use **Security → Report a vulnerability** instead, as [SECURITY.md](https://github.com/visubramaniam/vsp360-mcp/blob/main/SECURITY.md) describes.
+
+        If Claude chose the **wrong API operation** for a question, use the *Search problem* form instead.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+      placeholder: |
+        I asked Claude to list the alerts from the last day. The call failed with "…".
+        I expected a list of alerts.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The question you asked Claude, or the tool call and its arguments, if you know them.
+      placeholder: |
+        1. Configure the server with VSP360_ALLOW_WRITES unset
+        2. Ask "…"
+        3. See the error
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: vsp360-mcp version
+      description: "From `npm ls -g vsp360-mcp`, the image tag, the package file name, or the server's `ready:` line."
+      placeholder: "0.1.23"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - Claude Desktop extension (.mcpb)
+        - Claude Code plugin (vsp360-community)
+        - npm (npx or a global install)
+        - Standalone package (with bundled Node.js)
+        - Container image (ghcr.io or Docker Hub)
+        - From source
+    validations:
+      required: true
+  - type: dropdown
+    id: client
+    attributes:
+      label: MCP client
+      options:
+        - Claude Desktop
+        - Claude Code
+        - claude.ai
+        - Another MCP client (say which below)
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS (Apple silicon)
+        - macOS (Intel)
+        - Windows (x64)
+        - Windows (arm64)
+        - Linux (x64)
+        - Linux (arm64)
+    validations:
+      required: true
+  - type: input
+    id: vsp360
+    attributes:
+      label: VSP 360 version
+      description: If you know it. `vsp360GetAbout` returns it.
+      placeholder: "1.4"
+    validations:
+      required: false
+  - type: textarea
+    id: settings
+    attributes:
+      label: Settings
+      description: "Which `VSP360_*` settings you changed from their defaults, **without their values for the URL, client ID and secret**. For example: `VSP360_ALLOW_WRITES=true`, `VSP360_TOOLSETS=Platform Alerts`, `VSP360_CA_CERT` set."
+      render: text
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error messages and logs
+      description: "The tool's error result, and the server's messages on stderr (in Claude Desktop: Settings → Developer → the server's log). Remove secrets and identifying details."
+      render: text
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I removed secrets and anything that identifies my environment from this report.
+          required: true
+        - label: I searched the existing issues and the [Troubleshooting](https://github.com/visubramaniam/vsp360-mcp/wiki/Troubleshooting) page.
+          required: true
