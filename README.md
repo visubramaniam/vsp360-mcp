@@ -231,6 +231,10 @@ The Claude plugin in `plugin/` installs the server from its own lockfile, so it 
 
 Replace `spec/Platform-vsp360-openapi.yaml` (or point `VSP360_SPEC` at the new file) and restart the server. No code is generated from the spec, so nothing needs rebuilding. `npm run build` keeps a pre-parsed copy of the bundled spec in `dist/openapi-cache.json`, so the server starts without parsing YAML. The copy is only used while the YAML file is unchanged, so a replaced file is parsed afresh, which adds about a quarter of a second to startup. Run `npm run build` again to refresh the copy. If the new release adds `POST` operations that only read data, add them to `READ_ONLY_POSTS` in `src/spec.ts`.
 
+## Contributing
+
+Bug reports, search problems, documentation fixes and code are all welcome. [CONTRIBUTING.md](CONTRIBUTING.md) explains how to set up, test and submit a change, and the rules for keeping live VSP 360 data out of this public repository. Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md). Report security problems privately, as [SECURITY.md](SECURITY.md) describes.
+
 ## License
 
 The code in this repository is released under the [MIT License](LICENSE). The VSP 360 OpenAPI definition in `spec/` describes Hitachi Vantara's product API and is not covered by this license.
