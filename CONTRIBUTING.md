@@ -6,10 +6,11 @@ By taking part, you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Ways to help
 
-- **Report a bug.** Open an [issue](https://github.com/visubramaniam/vsp360-mcp/issues/new?template=bug_report.md) with the version (`npm ls -g vsp360-mcp`, the image tag, or the package file name), how you installed it, your operating system, and the server's messages. **Remove secrets and anything that identifies your environment first** (see [No live data](#no-live-data)).
+- **Report a bug.** Use the [bug report form](https://github.com/visubramaniam/vsp360-mcp/issues/new?template=bug_report.yml). It asks for the version, how you installed it, your MCP client and operating system, and the server's messages. **Remove secrets and anything that identifies your environment first** (see [No live data](#no-live-data)).
 - **Report a security problem privately.** Don't open a public issue. Use the repository's **Security** tab → **Report a vulnerability**, as [SECURITY.md](SECURITY.md) describes.
-- **Tell us where search goes wrong.** If Claude picked the wrong operation for a question, an issue with the question and the operation that should have answered it is very useful. Search quality is measured, so each such case can become a test.
+- **Tell us where search goes wrong.** If Claude picked the wrong operation for a question, the [search problem form](https://github.com/visubramaniam/vsp360-mcp/issues/new?template=search_problem.yml) asks for the question and the operation that should have answered it. Search quality is measured, so each such case can become a test.
 - **Improve the docs.** The README, INSTALL.md and the other files in the repository are the reference; the [wiki](https://github.com/visubramaniam/vsp360-mcp/wiki) is a guided tour of them.
+- **Suggest a feature** with the [feature request form](https://github.com/visubramaniam/vsp360-mcp/issues/new?template=feature_request.yml).
 - **Write code.** Start with an issue for anything bigger than a small fix, so we can agree on the approach before you spend time on it.
 
 ## Before you start
@@ -48,7 +49,7 @@ To try the server against a real VSP 360, set `VSP360_URL`, `VSP360_CLIENT_ID` a
 4. **Run `npm test`** and make sure it passes.
 5. **Update the docs** that describe what you changed: the README, INSTALL.md, README.docker.md, README.plugin.md or SECURITY.md as relevant.
 6. **Add a line to `CHANGELOG.md`** under `## Unreleased` for anything a user would notice, in the existing style: a bold one-line summary, then what changed and why.
-7. **Open a pull request** that says what changed, why, and how you tested it.
+7. **Open a pull request.** Its template asks what changed and why, how you tested it, and whether it changes what Claude can do on its own.
 
 CI runs the tests on Node.js 22 and 24, builds the npm package, the Claude Desktop extension and a Linux standalone package, smoke-tests that package, and runs CodeQL. A maintainer merges with **Rebase and merge** or **Squash and merge** to keep the history linear.
 

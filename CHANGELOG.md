@@ -5,6 +5,7 @@
 ### Added
 
 - **CONTRIBUTING.md and CODE_OF_CONDUCT.md.** The contributing guide covers setup, testing, the search evaluation's thresholds, keeping live VSP 360 data out of the repository, and how to make common changes (read-only `POST`s, secret operations, a new spec). The Code of Conduct is the Contributor Covenant 2.1, with reports made privately through the repository's Security tab. The README links both.
+- **Issue forms and a pull-request template.** Bug reports, search problems and feature requests each have a form that asks for what's needed (version, install method, MCP client, operating system) and reminds reporters to remove secrets and identifying details. Blank issues are off; the chooser sends security and conduct reports to private reporting. The pull-request template follows CONTRIBUTING.md's checklist and asks whether a change affects what Claude can do on its own.
 
 ## 0.1.23 — 2026-10-15
 

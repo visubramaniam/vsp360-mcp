@@ -1,0 +1,61 @@
+name: Search problem
+description: Claude picked the wrong API operation, or couldn't find the right one.
+title: "[Search]: "
+labels: ["search"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search quality is measured against labelled questions, so a question and the operation that should answer it can become a test case. Thank you.
+
+        **This repository is public.** Replace names, serial numbers and other identifying details in your question with placeholders such as `ARRAY-A` or `pool-01`.
+  - type: textarea
+    id: question
+    attributes:
+      label: The question you asked
+      description: In your own words, as you asked Claude.
+      placeholder: Which pools on ARRAY-A are more than 80% full?
+    validations:
+      required: true
+  - type: input
+    id: got
+    attributes:
+      label: What Claude used
+      description: The operation Claude searched for or called, if you know it, or what it did instead.
+      placeholder: vsp360GetDevicesInventory
+    validations:
+      required: false
+  - type: input
+    id: want
+    attributes:
+      label: The operation that answers it
+      description: "The operationId, if you know it. `vsp360_list_operations` with a `tag` lists an area's operations. Leave blank if you're not sure; say so below."
+      placeholder: analyticsRunQuery
+    validations:
+      required: false
+  - type: dropdown
+    id: confidence
+    attributes:
+      label: Search confidence shown
+      description: The first line of the `vsp360_list_operations` result, if you saw it.
+      options:
+        - HIGH
+        - MEDIUM
+        - LOW
+        - I didn't see it
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Other wordings that also fail, or the words you'd expect to find the operation by.
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: vsp360-mcp version
+      placeholder: "0.1.23"
+    validations:
+      required: true
