@@ -147,7 +147,7 @@ npm install -g vsp360-mcp
 
 Each GitHub release also has the same package as `vsp360-mcp-<version>.tgz`, for machines that can't reach the registry.
 
-**Claude Code plugin.** The [`plugin/`](plugin/README.md) folder packages the server with capacity and health-check skills: `/plugin install vsp360-community --marketplace visubramaniam/vsp360-mcp`. See [README.plugin.md](README.plugin.md) for installing, configuring and using it.
+**Claude Code plugin.** The [`plugin/`](plugin/README.md) folder packages the server with capacity, charting and health-check skills: `/plugin install vsp360-community --marketplace visubramaniam/vsp360-mcp`. See [README.plugin.md](README.plugin.md) for installing, configuring and using it.
 
 The examples below use `vsp360-mcp` as the command; substitute the path from whichever install you chose.
 
