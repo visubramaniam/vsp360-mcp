@@ -128,6 +128,7 @@ Then install the server in one of these ways. Each [GitHub release](https://gith
 | Package | Needs | Use it for |
 |---|---|---|
 | `vsp360-mcp-<version>.mcpb` | Claude Desktop | One-click install: open the file and Claude Desktop asks for the URL, client ID and secret. |
+| `vsp360-tufte-charts-<version>.zip` | Claude Desktop, with the extension | Optional skill for Tufte-style capacity and performance charts. Upload it under **Settings → Capabilities → Skills**; see [INSTALL.md](INSTALL.md#add-the-tufte-charts-skill-optional). |
 | `vsp360-mcp-<version>-<platform>.tar.gz` / `.zip` | nothing | Standalone install on macOS, Linux or Windows (x64 and arm64), with Node.js bundled in. |
 | npm package (`vsp360-mcp` on the npm registry) | Node.js 20+ | `npm install -g vsp360-mcp`, CI/CD pipelines. |
 | Docker image | Docker | See [README.docker.md](README.docker.md). |
@@ -221,7 +222,7 @@ Users · Groups · Group Access · Service Accounts · Roles · Identity Provide
 
 ## Building the packages
 
-`npm run package` builds every release package into `release/`. Use `--only npm,mcpb,standalone` and `--targets linux-x64,...` to build fewer, e.g. `npm run package -- --only standalone --targets darwin-arm64`. The standalone packages bundle Node.js 24, downloaded from nodejs.org and checked against its published SHA-256 sums. The Claude Desktop extension is packed with `npx @anthropic-ai/mcpb@2.1.2`, which is downloaded when needed rather than kept as a dev dependency.
+`npm run package` builds every release package into `release/`. Use `--only npm,mcpb,standalone,skill` and `--targets linux-x64,...` to build fewer, e.g. `npm run package -- --only standalone --targets darwin-arm64`. The standalone packages bundle Node.js 24, downloaded from nodejs.org and checked against its published SHA-256 sums. The Claude Desktop extension is packed with `npx @anthropic-ai/mcpb@2.1.2`, which is downloaded when needed rather than kept as a dev dependency.
 
 The [Release workflow](.github/workflows/release.yml) runs when a `v*` tag is pushed. It runs the tests, builds the packages and attaches them to the tag's GitHub release; if that release doesn't exist yet, it's created from the version's `CHANGELOG.md` section. It then publishes the same `.tgz` to the npm registry with [trusted publishing](https://docs.npmjs.com/trusted-publishers), so no npm token is stored and each version gets a provenance attestation; this is skipped if that version is already on npm. The trusted publisher is set up on npmjs.com under the package's **Settings → Trusted Publisher** (repository `visubramaniam/vsp360-mcp`, workflow `release.yml`). It pushes the `linux/amd64` and `linux/arm64` Docker image to `ghcr.io/visubramaniam/vsp360-mcp` using the workflow's own token, and also to Docker Hub if the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets are set. To rebuild an existing tag's packages, run the workflow by hand with that tag.
 

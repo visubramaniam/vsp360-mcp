@@ -71,6 +71,16 @@ Get-FileHash .\vsp360-mcp-0.1.23-win-x64.zip -Algorithm SHA256
 
 The extension runs with the Node.js built into Claude Desktop. To change a setting later, go to **Settings → Extensions → Hitachi VSP 360 (Community)**.
 
+### Add the Tufte charts skill (optional)
+
+The `vsp360-tufte-charts` skill teaches Claude to chart VSP 360 capacity and performance in the style of Edward Tufte: sparkline tables, run-out forecasts, small multiples, slopegraphs and latency plots, as one HTML file. The Claude Code plugin includes it. For Claude Desktop, each release has it as a separate skill file:
+
+1. Download `vsp360-tufte-charts-<version>.zip` from the same release. Don't unzip it.
+2. In Claude Desktop, open **Settings**, find **Skills** (under **Capabilities**), and upload the zip. Skills need a Pro, Max, Team or Enterprise plan with code execution turned on; on Team and Enterprise, an owner may need to allow them first.
+3. Turn the skill on, and ask for a chart, e.g. *"Chart pool usage for the last 45 days, with run-out dates."*
+
+The skill gets its data from the extension above, so install that first. It's read-only, and the same file works on claude.ai if you upload it there, but the extension's tools are only available in Claude Desktop.
+
 ## Standalone package
 
 Each standalone package contains the server and its own Node.js runtime. Download the one for your system:

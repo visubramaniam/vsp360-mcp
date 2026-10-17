@@ -76,3 +76,18 @@ test("the plugin folder has what the directory requires", () => {
   const [w, h] = [icon.readUInt32BE(16), icon.readUInt32BE(20)];
   assert.ok(w === h && w >= 512 && w <= 2048 && icon.length < 2 * 1024 * 1024, `icon is ${w}x${h}, ${icon.length} bytes`);
 });
+
+test("the skills packaged for Claude Desktop meet the skill upload's limits", () => {
+  // scripts/package.mjs zips these on their own; the upload allows a 64-character name and a 200-character description.
+  const skills = read("scripts/package.mjs").match(/^const SKILLS = (\[.*\]);$/m);
+  assert.ok(skills, "scripts/package.mjs lists SKILLS");
+  for (const name of JSON.parse(skills[1])) {
+    const head = read(`plugin/skills/${name}/SKILL.md`).match(/^---\n([\s\S]*?)\n---\n/);
+    assert.ok(head, `${name}/SKILL.md has frontmatter`);
+    const field = (key) => (head[1].match(new RegExp(`^${key}: (.*)$`, "m")) || [])[1]?.trim() ?? "";
+    assert.equal(field("name"), name);
+    assert.match(name, /^[a-z0-9-]{1,64}$/);
+    const description = field("description");
+    assert.ok(description.length > 0 && description.length <= 200, `${name}: description is ${description.length} characters`);
+  }
+});

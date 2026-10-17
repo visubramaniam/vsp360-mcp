@@ -4,10 +4,11 @@
 //   vsp360-mcp-<version>.tgz                    npm package: `npm install -g <file or URL>` (needs Node.js 20+)
 //   vsp360-mcp-<version>.mcpb                   Claude Desktop extension: double-click to install
 //   vsp360-mcp-<version>-<platform>.tar.gz|zip  standalone: the server plus a Node.js runtime, nothing to install
+//   vsp360-tufte-charts-<version>.zip           the Tufte charts skill, to upload in Claude Desktop or claude.ai
 //   SHA256SUMS                                  checksums of the files above
 //
 // Options:
-//   --only npm,mcpb,standalone   build only these kinds (default: all)
+//   --only npm,mcpb,standalone,skill   build only these kinds (default: all)
 //   --targets linux-x64,...      standalone platforms (default: all in TARGETS)
 // NODE_RUNTIME_VERSION overrides the Node.js version bundled in the standalone packages.
 import { execFileSync } from "node:child_process";
@@ -31,11 +32,14 @@ const MCPB = "@anthropic-ai/mcpb@2.1.2";
 
 // Standalone platforms, named as Node.js names its downloads.
 const TARGETS = ["darwin-arm64", "darwin-x64", "linux-x64", "linux-arm64", "win-x64", "win-arm64"];
+// Plugin skills also packaged on their own, for Claude Desktop and claude.ai's skill upload. Uploads allow a name of
+// up to 64 lowercase letters, digits and hyphens, and a description of up to 200 characters.
+const SKILLS = ["vsp360-tufte-charts"];
 // Files copied into every package besides dist/ and spec/.
 const APP_FILES = ["package.json", "package-lock.json", "LICENSE", "README.md", "INSTALL.md", "CHANGELOG.md"];
 
 const { values: opts } = parseArgs({
-  options: { only: { type: "string", default: "npm,mcpb,standalone" }, targets: { type: "string", default: TARGETS.join(",") } },
+  options: { only: { type: "string", default: "npm,mcpb,standalone,skill" }, targets: { type: "string", default: TARGETS.join(",") } },
 });
 const kinds = new Set(opts.only.split(","));
 const targets = opts.targets.split(",");
@@ -65,6 +69,22 @@ function stageApp() {
 function buildNpm() {
   log("npm package");
   run("npm", ["pack", "--pack-destination", out, "--loglevel=error"]);
+}
+
+/** One skill from plugin/skills as a zip whose top level is the skill's folder, as the skill upload expects. */
+function buildSkill(name) {
+  log(`skill ${name}`);
+  const src = join(root, "plugin", "skills", name);
+  const head = readFileSync(join(src, "SKILL.md"), "utf8").match(/^---\n([\s\S]*?)\n---\n/);
+  if (!head) throw new Error(`${name}/SKILL.md has no frontmatter`);
+  const field = (key) => (head[1].match(new RegExp(`^${key}: (.*)$`, "m")) || [])[1]?.trim();
+  if (field("name") !== name || !/^[a-z0-9-]{1,64}$/.test(name)) throw new Error(`${name}/SKILL.md: name must be "${name}", up to 64 of a-z, 0-9 and -`);
+  const description = field("description") || "";
+  if (!description || description.length > 200) throw new Error(`${name}/SKILL.md: description is ${description.length} characters; the upload allows 1 to 200`);
+  const dir = join(stage, "skills", name);
+  cpSync(src, dir, { recursive: true, filter: (f) => !/(^|[\\/])\.[^\\/]+$/.test(f.slice(src.length)) });
+  copyFileSync(join(root, "LICENSE"), join(dir, "LICENSE"));
+  run("zip", ["-qrX", join(out, `${name}-${version}.zip`), name], join(stage, "skills"));
 }
 
 function buildMcpb(app) {
@@ -187,6 +207,7 @@ async function buildStandalone(app, target) {
 }
 
 if (kinds.has("npm")) buildNpm();
+if (kinds.has("skill")) for (const s of SKILLS) buildSkill(s);
 if (kinds.has("mcpb") || kinds.has("standalone")) {
   const app = stageApp();
   if (kinds.has("mcpb")) buildMcpb(app);

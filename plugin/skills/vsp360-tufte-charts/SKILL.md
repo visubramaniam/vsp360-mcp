@@ -1,13 +1,13 @@
 ---
 name: vsp360-tufte-charts
-description: Tufte-style charts for Hitachi VSP 360 capacity and performance reporting and planning, from the vsp360 MCP server's Analytics (MQL) data. Use when asked to chart, graph, plot, visualize or trend VSP 360 data, for sparkline summary tables, capacity run-out forecasts, small multiples of MP, port or parity-group load, before/after slopegraphs, IOPS-versus-latency scatters, latency distributions, or a capacity breakdown from raw to used to saved.
+description: Chart, graph or trend Hitachi VSP 360 capacity and performance in Tufte style, such as sparkline tables, run-out forecasts, small multiples and slopegraphs, as one HTML file.
 ---
 
 # Tufte charts for VSP 360
 
 Turn VSP 360 capacity and performance data into dense, honest charts in the style of Edward Tufte, saved as a single self-contained HTML file.
 
-Get the data the way the `vsp360-capacity-report` skill does (Analytics, `analyticsRunQuery`). This skill adds which chart answers which question, how to shape the data, and how to draw it.
+The data comes from Analytics (`analyticsRunQuery`) on the `vsp360` MCP server, which must be connected: the vsp360-community plugin in Claude Code, or the vsp360-mcp extension (`.mcpb`) in Claude Desktop. If its tools aren't available, say so and stop; never chart made-up numbers. This skill adds which chart answers which question, how to shape the data, and how to draw it.
 
 ## 1. Pick the chart from the question
 
@@ -33,16 +33,18 @@ A report usually needs two or three charts, not all seven. Lead with the one tha
    - **Performance (hours to a day):** query hour by hour.
    - **Capacity trends (weeks):** sample one hour per day at the same time of day. Say in the chart's note that the trend is daily samples.
 4. Scope by relationship (`raidStorage[=name rx ARRAY]/raidPool[...]`), not by several filters on one type, which combine with OR.
-5. Save long results with `save_to` and read them from the file rather than into the conversation.
+5. **Long results:** in Claude Code, save them with `save_to` and read them from the file rather than into the conversation. In Claude Desktop, the saved file lands on the user's computer, out of reach of the chat, so query fewer attributes and objects instead.
 6. There's no server-side sort, threshold filter or average. Aggregate, sort and compute percentiles yourself, from the tool results.
 
 ## 3. Draw it
 
-1. Copy [assets/report-template.html](assets/report-template.html) to the user's working folder, or the download folder if there's none. Name it after the report, e.g. `pool-capacity-2026-10.html`.
-2. Inline [assets/tufte-charts.js](assets/tufte-charts.js) into the template's `<script id="tufte-charts">` element, so the file opens anywhere with no network access.
-3. Put the data in the `REPORT` object and one call per chart in `draw()`. The template shows every renderer with sample data. Replace all of it; never leave sample values in a report.
+1. Start from [assets/report-template.html](assets/report-template.html). Name the report after its subject, e.g. `pool-capacity-2026-10.html`, and save it where the user can open it:
+   - **Claude Code:** the user's working folder.
+   - **Claude Desktop or claude.ai:** the outputs folder, so it's offered as a download, or as an HTML artifact if code execution isn't available.
+2. Replace the template's `<script id="tufte-charts" src="tufte-charts.js"></script>` with the contents of [assets/tufte-charts.js](assets/tufte-charts.js) inside `<script id="tufte-charts">`, so the file opens anywhere with no network access.
+3. Put the data in the `REPORT` object and one call per chart in `draw()`. The template shows every renderer with sample data. Replace all of it and delete the sample generator and the "Sample data" note; never leave sample values in a report.
 4. Fill in the title, the one-sentence answer, and the source line: array names, time range, time zone, and when the data was collected.
-5. Open the file in a browser if you can, and check it in both light and dark mode before handing it over.
+5. If you can open the file in a browser, check it in both light and dark mode before handing it over.
 
 If the user wants a chart inside a document or slide instead, follow the same design rules with whatever charting the destination offers.
 
