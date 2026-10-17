@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **The vsp360-community plugin uses vsp360-mcp 0.1.24:** its version and lockfile moved to the 0.1.24 release, so existing installs are offered the new `vsp360-tufte-charts` skill.
+
 ## 0.1.24 — 2026-10-16
 
 ### Added
