@@ -7,8 +7,9 @@ A community plugin that connects Claude to **Hitachi VSP 360** through its REST 
 ## What's in the plugin
 
 - **An MCP server, `vsp360`:** the [`vsp360-mcp`](https://www.npmjs.com/package/vsp360-mcp) npm package, pinned to an exact version. It gives Claude access to all 264 operations of the VSP 360 1.4 REST API through three discovery tools (`vsp360_list_operations`, `vsp360_describe_operation`, `vsp360_call_operation`), plus direct tools for any API areas you choose.
-- **Two skills:**
+- **Three skills:**
   - `vsp360-capacity-report`: capacity and performance reports and planning, using VSP 360 Analytics.
+  - `vsp360-tufte-charts`: Tufte-style charts of capacity and performance, saved as one self-contained HTML file.
   - `vsp360-health-check`: a quick health check of the platform and its devices.
 
 ## Install

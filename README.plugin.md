@@ -1,6 +1,6 @@
 # The vsp360-community Claude plugin
 
-**vsp360-community** is a Claude plugin for **Hitachi VSP 360**. It installs the [vsp360-mcp](README.md) server, so Claude can work with VSP 360 through its REST API. It also adds two skills: **capacity and performance reports**, and a **platform health check**.
+**vsp360-community** is a Claude plugin for **Hitachi VSP 360**. It installs the [vsp360-mcp](README.md) server, so Claude can work with VSP 360 through its REST API. It also adds three skills: **capacity and performance reports**, **Tufte-style charts** of that data, and a **platform health check**.
 
 > Not an official Hitachi Vantara product: vsp360-mcp and this plugin are an independent, community project, and aren't supported by or affiliated with Hitachi Vantara. Hitachi and VSP 360 are trademarks of their owners.
 
@@ -96,14 +96,15 @@ Ask in plain language. Claude finds the right VSP 360 API operation, checks its 
 
 ### The skills
 
-The plugin's two skills guide Claude through common tasks. Claude uses them when your request fits:
+The plugin's three skills guide Claude through common tasks. Claude uses them when your request fits:
 
 | Skill | Use it for | Example |
 |---|---|---|
 | `vsp360-capacity-report` | Capacity and performance reports and planning, through VSP 360 Analytics: pool usage, growth, over-commitment, data reduction, busiest volumes and ports, latency | *"Give me a capacity report for all pools, with 30-day growth."* |
+| `vsp360-tufte-charts` | Charts in the style of Edward Tufte, saved as one self-contained HTML file: sparkline tables, capacity run-out forecasts, small multiples of MP, port or parity-group load, slopegraphs, IOPS-versus-latency scatters, latency distributions and capacity breakdowns | *"Chart pool usage for the last 45 days, with run-out dates."* |
 | `vsp360-health-check` | A quick status of the platform, active alerts, devices not in a normal state, and failed jobs | *"Run a health check on VSP 360."* |
 
-Both are read-only. To start one by name, type `/vsp360-community:vsp360-capacity-report` or `/vsp360-community:vsp360-health-check`.
+All three are read-only. To start one by name, type `/vsp360-community:vsp360-capacity-report`, `/vsp360-community:vsp360-tufte-charts` or `/vsp360-community:vsp360-health-check`.
 
 ### Direct tools for the areas you use most
 

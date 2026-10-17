@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VSP 360 Capacity Report</title>
+<!--
+  Template for the vsp360-tufte-charts skill.
+  1. Replace the src attribute of <script id="tufte-charts"> with the contents of tufte-charts.js, inline, so the file works offline.
+  2. Replace REPORT and draw() with real data from tool results. Delete the sample generator and the "Sample data" note.
+  3. Keep only the charts the report needs.
+-->
+<style>
+  :root {
+    --bg: #fffff8; --ink: #111111; --muted: #6b6b6b; --faint: #c9c9c4; --band: #ecece6; --accent: #b4321e;
+    --font: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #151515; --ink: #ececec; --muted: #9a9a9a; --faint: #4a4a4a; --band: #262626; --accent: #ff7a5c; }
+  }
+  :root[data-theme="dark"] { --bg: #151515; --ink: #ececec; --muted: #9a9a9a; --faint: #4a4a4a; --band: #262626; --accent: #ff7a5c; }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 var(--font); }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-weight: 400; font-size: 2rem; margin: 0 0 4px; }
+  h2 { font-weight: 400; font-style: italic; font-size: 1.3rem; margin: 40px 0 4px; }
+  .answer { font-size: 1.15rem; margin: 12px 0 4px; max-width: 46em; }
+  .source, .note { color: var(--muted); font-size: 0.85rem; margin: 4px 0 12px; max-width: 60em; }
+  .sample { color: var(--accent); font-size: 0.85rem; }
+  .chart { width: 100%; overflow-x: auto; }
+
+  /* Chart marks. Data is ink; context is faint; the accent is for what crosses a threshold. */
+  svg.tc { display: block; max-width: 100%; height: auto; font-family: var(--font); }
+  svg.tc-sparkline { display: inline-block; vertical-align: middle; }
+  .tc-txt { fill: var(--muted); font-size: 12px; }
+  .tc-small { font-size: 11px; }
+  .tc-lbl { fill: var(--ink); font-size: 12px; }
+  .tc-lbl-acc, .tc-acc-txt { fill: var(--accent); }
+  .tc-axis, .tc-base { stroke: var(--faint); stroke-width: 1; }
+  .tc-rug { stroke: var(--muted); stroke-width: 1; opacity: 0.6; }
+  .tc-ctx { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.7; }
+  .tc-ann { stroke: var(--faint); stroke-width: 1; }
+  .tc-line { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-linejoin: round; }
+  .tc-thin { stroke-width: 1.1; }
+  .tc-line-acc { stroke: var(--accent); }
+  .tc-fc { fill: none; stroke: var(--muted); stroke-width: 1.3; stroke-dasharray: 5 4; }
+  .tc-spark { fill: none; stroke: var(--ink); stroke-width: 1; }
+  .tc-band { fill: var(--band); }
+  .tc-dot { fill: var(--ink); }
+  .tc-dot-soft { fill: var(--ink); opacity: 0.55; }
+  .tc-dot-acc { fill: var(--accent); }
+  .tc-dot-ring { fill: var(--bg); stroke: var(--muted); stroke-width: 1.2; }
+  .tc-slope { stroke: var(--faint); stroke-width: 1.2; }
+  .tc-slope-acc { stroke: var(--accent); stroke-width: 1.6; }
+  .tc-qline { stroke: var(--ink); stroke-width: 1.2; }
+  .tc-qline-acc { stroke: var(--accent); }
+  .tc-bar { fill: var(--muted); opacity: 0.55; }
+  .tc-bar-acc { fill: var(--accent); opacity: 0.55; }
+
+  table.tc-table { border-collapse: collapse; font-size: 0.9rem; width: 100%; }
+  .tc-table th { font-weight: 400; font-style: italic; color: var(--muted); text-align: left; padding: 4px 10px 6px 0; border-bottom: 1px solid var(--faint); }
+  .tc-table td { padding: 3px 10px 3px 0; white-space: nowrap; }
+  .tc-table .tc-r { text-align: right; }
+  .tc-table .tc-num { font-family: var(--mono); font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+  .tc-table .tc-spark-cell { text-align: right; }
+  .tc-table tr.tc-hl td:first-child, .tc-table tr.tc-hl .tc-num { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>VSP 360 capacity and performance</h1>
+  <p class="answer" id="answer"></p>
+  <p class="source" id="source"></p>
+  <p class="sample" id="sample-note">Sample data: replace every value with tool results before sharing.</p>
+
+  <h2>Pools at a glance</h2>
+  <p class="note">Sorted by days to 80% used. Sparklines share a 0 to 100% scale; the shaded band is 0 to 80%.</p>
+  <div class="chart" id="c-table"></div>
+
+  <h2>Pool usage and projection</h2>
+  <p class="note" id="n-forecast"></p>
+  <div class="chart" id="c-series"></div>
+
+  <h2>MP blade utilization</h2>
+  <p class="note">Hourly means. Highlighted panels peaked above 70%.</p>
+  <div class="chart" id="c-multiples"></div>
+
+  <h2>Pool usage, quarter over quarter</h2>
+  <div class="chart" id="c-slope"></div>
+
+  <h2>Volumes: IOPS against response time</h2>
+  <p class="note">Each dot is a volume; the ticks on the axes show where they cluster. Labelled: the busiest and slowest.</p>
+  <div class="chart" id="c-scatter"></div>
+
+  <h2>Response time by hour of day</h2>
+  <p class="note">Line from min to 25th percentile, dot at the median, line from 75th percentile to max.</p>
+  <div class="chart" id="c-quartile"></div>
+
+  <h2>Where the capacity went</h2>
+  <div class="chart" id="c-flow"></div>
+</main>
+
+<script id="tufte-charts" src="tufte-charts.js"></script>
+<script>
+// ---- Sample data generator: delete it and fill REPORT from tool results. ----
+function sample() {
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const day = 86400e3, end = Date.parse("2026-10-15T12:00:00");
+  const daily = (start, rate, noise) => Array.from({ length: 45 }, (_, i) => [end - (44 - i) * day, Math.min(100, start + rate * i + (rnd() - 0.5) * noise)]);
+  const hourly = (base, amp) => Array.from({ length: 48 }, (_, i) => [end - (47 - i) * 3600e3, Math.max(0, base + amp * Math.sin(i / 3.8) + (rnd() - 0.5) * 8)]);
+  const pools = [
+    { pool: "ARRAY-A / Pool 1", series: daily(58, 0.42, 1.5) },
+    { pool: "ARRAY-A / Pool 2", series: daily(40, 0.05, 2) },
+    { pool: "ARRAY-B / Pool 1", series: daily(66, 0.31, 1.2) },
+    { pool: "ARRAY-B / Pool 3", series: daily(81, 0.12, 0.8) },
+    { pool: "ARRAY-C / Pool 1", series: daily(30, 0.2, 6) },
+  ];
+  return {
+    title: "VSP 360 capacity and performance",
+    source: "Sample data. Source: VSP 360 Analytics, daily samples at 12:00 from 1 Sep to 15 Oct 2026, server time.",
+    pools,
+    mpb: ["MPB-1MA", "MPB-1MB", "MPB-2MC", "MPB-2MD", "MPB-1ME", "MPB-1MF", "MPB-2MG", "MPB-2MH"].map((t, i) => ({ title: t, points: hourly(i === 2 ? 62 : 35, i === 2 ? 14 : 9) })),
+    quarter: pools.map((p) => ({ label: p.pool, before: p.series[0][1], after: p.series[p.series.length - 1][1] })),
+    volumes: Array.from({ length: 160 }, (_, i) => {
+      const x = Math.exp(rnd() * 9);
+      return { x, y: 0.4 + rnd() * 1.6 + (x > 3000 ? rnd() * 6 : 0), label: "00:" + (0x10 + i).toString(16).toUpperCase() };
+    }),
+    hours: Array.from({ length: 24 }, (_, h) => ({ label: String(h).padStart(2, "0"), values: Array.from({ length: 30 }, () => 0.8 + rnd() * 1.5 + (h >= 1 && h <= 4 ? rnd() * 5 : 0)) })),
+  };
+}
+
+const REPORT = sample();
+
+function draw() {
+  const T = window.TufteCharts;
+  const threshold = 80;
+
+  // Forecast every pool, then lead with the answer.
+  const rows = REPORT.pools.map((p) => {
+    const fc = T.forecast(p.series, threshold);
+    const last = p.series[p.series.length - 1][1];
+    return { pool: p.pool, used: last, trend: p.series, runout: fc.credible ? fc.days : null, fc, series: p.series };
+  });
+  const soonest = rows.filter((r) => r.runout != null).sort((a, b) => a.runout - b.runout)[0];
+  const over = rows.filter((r) => r.used >= threshold);
+  document.getElementById("answer").textContent =
+    (over.length ? `${over.length} pool${over.length > 1 ? "s are" : " is"} already above ${threshold}%. ` : "") +
+    (soonest ? `${soonest.pool} reaches ${threshold}% in about ${soonest.runout} day${soonest.runout === 1 ? "" : "s"} at its current rate.` : "No pool has a credible run-out date.");
+  document.getElementById("source").textContent = REPORT.source;
+
+  T.sparkTable(document.getElementById("c-table"), {
+    columns: [
+      { key: "pool", label: "Pool" },
+      { key: "used", label: "Used", unit: "%" },
+      { key: "trend", label: "45 days", spark: { min: 0, max: 100, band: [0, threshold] } },
+      { key: "runout", label: `Days to ${threshold}%`, align: "right" },
+    ],
+    rows,
+    sortBy: "runout",
+    highlight: (r) => r.used >= threshold,
+  });
+
+  const focus = rows.slice(0, 3);
+  T.timeSeries(document.getElementById("c-series"), {
+    series: focus.map((r) => ({ name: r.pool, points: r.series })),
+    forecast: focus.filter((r) => r.fc.credible).map((r) => ({ name: `${r.pool} projection`, points: r.fc.line })),
+    thresholds: [{ value: threshold, label: `${threshold}% warning` }, { value: 90, label: "90% critical" }],
+    annotations: [{ t: "2026-09-20T00:00:00", label: "Migration from ARRAY-C" }],
+    unit: "%", yMin: 0, yMax: 100,
+  });
+  document.getElementById("n-forecast").textContent = focus.map((r) =>
+    r.fc.credible ? `${r.pool}: +${r.fc.slopePerDay.toFixed(2)} points a day, R² ${r.fc.r2.toFixed(2)}.` : `${r.pool}: no credible run-out date, ${r.fc.reason}.`).join(" ") +
+    " Dashed lines are straight-line projections, not commitments; a ring marks where one reaches the threshold within the chart.";
+
+  T.smallMultiples(document.getElementById("c-multiples"), {
+    panels: REPORT.mpb, unit: "%", yMin: 0, yMax: 100, threshold: { value: 70, label: "70%" },
+  });
+
+  T.slopegraph(document.getElementById("c-slope"), {
+    leftLabel: "1 Sep", rightLabel: "15 Oct", unit: "%",
+    items: REPORT.quarter,
+    highlight: (it) => it.after >= threshold || it.after - it.before > 10,
+  });
+
+  T.dotDash(document.getElementById("c-scatter"), {
+    points: REPORT.volumes, xLog: true,
+    xLabel: "IOPS (mean, 24 h)", yLabel: "Response time (ms, p95)",
+    yThreshold: { value: 5, label: "5 ms SLA" }, labelTop: 6,
+  });
+
+  T.quartilePlot(document.getElementById("c-quartile"), {
+    groups: REPORT.hours, unit: "ms", yMin: 0, threshold: { value: 5, label: "5 ms SLA" },
+  });
+
+  T.capacityFlow(document.getElementById("c-flow"), {
+    unit: "TiB",
+    stages: [
+      { label: "Physical (pool total)", value: 500 },
+      { label: "Used", value: 362, of: 0 },
+      { label: "Written by hosts (before reduction)", value: 905, of: 1, note: "2.5 : 1 data reduction" },
+      { label: "Subscribed", value: 1400, of: 0, note: "2.8 x over-provisioned" },
+    ],
+  });
+}
+
+draw();
+let resizeTimer;
+window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(draw, 150); });
+</script>
+</body>
+</html>

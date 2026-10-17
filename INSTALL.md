@@ -112,7 +112,7 @@ From a Command Prompt you can also run `bin\vsp360-mcp.cmd`. In MCP client confi
 
 ## Claude Code plugin
 
-The [`plugin/`](https://github.com/visubramaniam/vsp360-mcp/tree/main/plugin) folder is a Claude plugin, **vsp360-community**. It installs the server from its own lockfile (every package pinned with an integrity hash) and adds two skills: capacity and performance reports, and a health check. Install it in Claude Code from this repository's marketplace:
+The [`plugin/`](https://github.com/visubramaniam/vsp360-mcp/tree/main/plugin) folder is a Claude plugin, **vsp360-community**. It installs the server from its own lockfile (every package pinned with an integrity hash) and adds three skills: capacity and performance reports, Tufte-style charts of that data, and a health check. Install it in Claude Code from this repository's marketplace:
 
 ```
 /plugin install vsp360-community --marketplace visubramaniam/vsp360-mcp

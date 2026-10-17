@@ -27,6 +27,7 @@ Use the `vsp360` MCP server. Capacity, usage, growth and performance questions a
 - **Over-commitment** is subscribed capacity ÷ physical capacity; state which figures you used.
 - **Say what's not available.** VSP 360 doesn't expose capacity for every device type through the API (e.g. some File, Object and SDS systems); say so instead of guessing.
 - **Every number must come from a tool result** in this conversation.
+- **Charts:** when the user wants charts, trends or a visual report, use the `vsp360-tufte-charts` skill to draw them.
 
 ## Safety
 
