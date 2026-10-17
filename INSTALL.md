@@ -29,7 +29,7 @@ Every method takes the same three required settings: `VSP360_URL`, `VSP360_CLIEN
 
 ## Choose an install method
 
-All packages are on the [GitHub releases page](https://github.com/visubramaniam/vsp360-mcp/releases). The commands below use version 0.1.23; replace it with the release you want.
+All packages are on the [GitHub releases page](https://github.com/visubramaniam/vsp360-mcp/releases). The commands below use version 0.1.24; replace it with the release you want.
 
 | Method | Needs | Best for |
 |---|---|---|
@@ -53,12 +53,12 @@ shasum -a 256 -c SHA256SUMS --ignore-missing
 Windows (PowerShell): compare this output with the package's line in `SHA256SUMS`:
 
 ```powershell
-Get-FileHash .\vsp360-mcp-0.1.23-win-x64.zip -Algorithm SHA256
+Get-FileHash .\vsp360-mcp-0.1.24-win-x64.zip -Algorithm SHA256
 ```
 
 ## Claude Desktop extension (.mcpb)
 
-1. Download `vsp360-mcp-0.1.23.mcpb`.
+1. Download `vsp360-mcp-0.1.24.mcpb`.
 2. Open it, either by double-clicking it or by dragging it onto Claude Desktop.
 3. Click **Install**, then fill in the settings:
    - **VSP 360 URL**, **Client ID** and **Client secret** are required. Claude Desktop treats the secret as sensitive and doesn't show it again.
@@ -87,12 +87,12 @@ Each standalone package contains the server and its own Node.js runtime. Downloa
 
 | System | Package |
 |---|---|
-| macOS, Apple silicon | `vsp360-mcp-0.1.23-darwin-arm64.tar.gz` |
-| macOS, Intel | `vsp360-mcp-0.1.23-darwin-x64.tar.gz` |
-| Linux, x64 | `vsp360-mcp-0.1.23-linux-x64.tar.gz` |
-| Linux, arm64 | `vsp360-mcp-0.1.23-linux-arm64.tar.gz` |
-| Windows, x64 | `vsp360-mcp-0.1.23-win-x64.zip` |
-| Windows, arm64 | `vsp360-mcp-0.1.23-win-arm64.zip` |
+| macOS, Apple silicon | `vsp360-mcp-0.1.24-darwin-arm64.tar.gz` |
+| macOS, Intel | `vsp360-mcp-0.1.24-darwin-x64.tar.gz` |
+| Linux, x64 | `vsp360-mcp-0.1.24-linux-x64.tar.gz` |
+| Linux, arm64 | `vsp360-mcp-0.1.24-linux-arm64.tar.gz` |
+| Windows, x64 | `vsp360-mcp-0.1.24-win-x64.zip` |
+| Windows, arm64 | `vsp360-mcp-0.1.24-win-arm64.zip` |
 
 The Linux packages need glibc 2.28 or later (RHEL/Rocky 8+, Debian 10+, Ubuntu 20.04+). On Alpine Linux, use [Docker](#docker) or the [npm package](#npm-package) instead.
 
@@ -101,21 +101,21 @@ The Linux packages need glibc 2.28 or later (RHEL/Rocky 8+, Debian 10+, Ubuntu 2
 Unpack the archive. To put the command on your `PATH`, symlink it:
 
 ```bash
-sudo tar -xzf vsp360-mcp-0.1.23-linux-x64.tar.gz -C /opt
+sudo tar -xzf vsp360-mcp-0.1.24-linux-x64.tar.gz -C /opt
 ```
 
 ```bash
-sudo ln -sf /opt/vsp360-mcp-0.1.23-linux-x64/bin/vsp360-mcp /usr/local/bin/vsp360-mcp
+sudo ln -sf /opt/vsp360-mcp-0.1.24-linux-x64/bin/vsp360-mcp /usr/local/bin/vsp360-mcp
 ```
 
 The server command is then `/usr/local/bin/vsp360-mcp`. The launcher follows the symlink to find its runtime, so the archive can live anywhere.
 
 ### Windows
 
-Unzip the archive to a folder such as `C:\Program Files\vsp360-mcp`. This creates a `vsp360-mcp-0.1.23-win-x64` folder there. The server is started by its bundled `runtime\node.exe` running `dist\index.js`:
+Unzip the archive to a folder such as `C:\Program Files\vsp360-mcp`. This creates a `vsp360-mcp-0.1.24-win-x64` folder there. The server is started by its bundled `runtime\node.exe` running `dist\index.js`:
 
 ```powershell
-& "C:\Program Files\vsp360-mcp\vsp360-mcp-0.1.23-win-x64\runtime\node.exe" "C:\Program Files\vsp360-mcp\vsp360-mcp-0.1.23-win-x64\dist\index.js"
+& "C:\Program Files\vsp360-mcp\vsp360-mcp-0.1.24-win-x64\runtime\node.exe" "C:\Program Files\vsp360-mcp\vsp360-mcp-0.1.24-win-x64\dist\index.js"
 ```
 
 From a Command Prompt you can also run `bin\vsp360-mcp.cmd`. In MCP client configs, use `node.exe` and `index.js` as shown in [Connect it to Claude](#connect-it-to-claude), because clients often can't start `.cmd` files directly.
@@ -140,22 +140,22 @@ The package is published on the npm registry as [`vsp360-mcp`](https://www.npmjs
 npm install -g vsp360-mcp
 ```
 
-This installs the `vsp360-mcp` command. To find its full path, which Claude Desktop needs, run `which vsp360-mcp` (`where vsp360-mcp` on Windows). To install a specific version, add it to the name, e.g. `npm install -g vsp360-mcp@0.1.23`.
+This installs the `vsp360-mcp` command. To find its full path, which Claude Desktop needs, run `which vsp360-mcp` (`where vsp360-mcp` on Windows). To install a specific version, add it to the name, e.g. `npm install -g vsp360-mcp@0.1.24`.
 
 To run it without a global install, use `npx`. Pin the version, so a new release isn't picked up without you knowing:
 
 ```bash
-npx -y vsp360-mcp@0.1.23
+npx -y vsp360-mcp@0.1.24
 ```
 
-With `npx`, the MCP client config uses `npx` as the command and `["-y", "vsp360-mcp@0.1.23"]` as the arguments.
+With `npx`, the MCP client config uses `npx` as the command and `["-y", "vsp360-mcp@0.1.24"]` as the arguments.
 
 Versions published by the Release workflow carry a signed [provenance attestation](https://docs.npmjs.com/generating-provenance-statements) linking them to the GitHub commit and workflow run that built them. You can see it on the package's npm page.
 
 **Without the npm registry.** If your machines can't reach registry.npmjs.org, every GitHub release also has the same package as a file, `vsp360-mcp-<version>.tgz`. Install it from its URL or from a downloaded copy:
 
 ```bash
-npm install -g https://github.com/visubramaniam/vsp360-mcp/releases/download/v0.1.23/vsp360-mcp-0.1.23.tgz
+npm install -g https://github.com/visubramaniam/vsp360-mcp/releases/download/v0.1.24/vsp360-mcp-0.1.24.tgz
 ```
 
 Versions 0.1.16 and earlier are only available this way.
@@ -165,7 +165,7 @@ Versions 0.1.16 and earlier are only available this way.
 The image `docker.io/subramaniamv/vsp360-mcp` is built for `linux/amd64` and `linux/arm64`. Each release is tagged with its version, and `latest` points at the newest release. From version 0.1.18, the same image is also published as `ghcr.io/visubramaniam/vsp360-mcp`.
 
 ```bash
-docker pull docker.io/subramaniamv/vsp360-mcp:0.1.23
+docker pull docker.io/subramaniamv/vsp360-mcp:0.1.24
 ```
 
 MCP clients start the container themselves with `docker run -i --rm`. The image is set up for this, so it doesn't run as a long-lived service. [README.docker.md](README.docker.md) covers the Claude configuration, mounting folders for downloads, uploads and certificates, and troubleshooting.
@@ -188,8 +188,8 @@ In these examples, `vsp360-mcp` is the server command. Replace it with the path 
 
 | Install method | Command |
 |---|---|
-| Standalone, macOS/Linux | `/opt/vsp360-mcp-0.1.23-linux-x64/bin/vsp360-mcp`, or `/usr/local/bin/vsp360-mcp` if you made the symlink |
-| Standalone, Windows | `C:\Program Files\vsp360-mcp\vsp360-mcp-0.1.23-win-x64\runtime\node.exe` with the argument `...\dist\index.js` |
+| Standalone, macOS/Linux | `/opt/vsp360-mcp-0.1.24-linux-x64/bin/vsp360-mcp`, or `/usr/local/bin/vsp360-mcp` if you made the symlink |
+| Standalone, Windows | `C:\Program Files\vsp360-mcp\vsp360-mcp-0.1.24-win-x64\runtime\node.exe` with the argument `...\dist\index.js` |
 | npm | the output of `which vsp360-mcp` |
 | Source | `node` with the argument `/ABSOLUTE/PATH/TO/vsp360-mcp/dist/index.js` |
 | Docker | see [README.docker.md](README.docker.md#4-connect-it-to-claude) |
@@ -235,8 +235,8 @@ Windows, standalone package (backslashes are doubled in JSON):
 {
   "mcpServers": {
     "vsp360": {
-      "command": "C:\\Program Files\\vsp360-mcp\\vsp360-mcp-0.1.23-win-x64\\runtime\\node.exe",
-      "args": ["C:\\Program Files\\vsp360-mcp\\vsp360-mcp-0.1.23-win-x64\\dist\\index.js"],
+      "command": "C:\\Program Files\\vsp360-mcp\\vsp360-mcp-0.1.24-win-x64\\runtime\\node.exe",
+      "args": ["C:\\Program Files\\vsp360-mcp\\vsp360-mcp-0.1.24-win-x64\\dist\\index.js"],
       "env": {
         "VSP360_URL": "https://vsp360.example.com",
         "VSP360_CLIENT_ID": "my-service-account",
@@ -261,7 +261,7 @@ This GitHub Actions example installs the server from the npm registry and writes
 
 ```yaml
 env:
-  VSP360_VERSION: 0.1.23
+  VSP360_VERSION: 0.1.24
 
 steps:
   - name: Install vsp360-mcp
